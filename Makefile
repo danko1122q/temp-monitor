@@ -1,6 +1,5 @@
 # Makefile for Ultimate Hardware Temperature Monitor
 # Version 0.0.1
-# FIX: Adjusted object compilation rules to correctly reference SRC_DIR
 
 # Compiler and flags
 CC = gcc
@@ -42,12 +41,11 @@ directories:
 	@mkdir -p $(BUILD_DIR)
 	@mkdir -p $(BIN_DIR)
 
-# Compile object files untuk build normal (FIXED)
-# Target: build/main.o bergantung pada src/main.c
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c $(HEADERS)
+# Compile object files
+$(BUILD_DIR)/%.o: %.c $(HEADERS)
 	@echo "$(COLOR_YELLOW)Compiling $<...$(COLOR_RESET)"
 	@$(CC) $(CFLAGS) -c $< -o $@
-	
+
 # Link executable
 $(TARGET): $(OBJECTS)
 	@echo "$(COLOR_YELLOW)Linking $(TARGET)...$(COLOR_RESET)"
@@ -59,9 +57,7 @@ debug: directories $(TARGET_DEBUG)
 	@echo "$(COLOR_GREEN)✓ Debug build completed!$(COLOR_RESET)"
 	@echo "$(COLOR_CYAN)Run with: gdb $(TARGET_DEBUG)$(COLOR_RESET)"
 
-# Compile object files untuk build debug (FIXED)
-# Target: build/main-debug.o bergantung pada src/main.c
-$(BUILD_DIR)/%-debug.o: $(SRC_DIR)/%.c $(HEADERS)
+$(BUILD_DIR)/%-debug.o: %.c $(HEADERS)
 	@echo "$(COLOR_YELLOW)Compiling $< (debug)...$(COLOR_RESET)"
 	@$(CC) $(CFLAGS) -c $< -o $@
 
