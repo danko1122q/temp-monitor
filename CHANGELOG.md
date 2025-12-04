@@ -162,7 +162,7 @@ While this version includes core monitoring functionality, many advanced feature
 ### Installation
 
 ```bash
-git clone https://github.com/yourusername/temp-monitor.git
+git clone https://github.com/danko1122/temp-monitor.git
 cd temp-monitor
 make
 sudo make install
@@ -183,7 +183,7 @@ tempmonitor --list
 
 ### Bug Reports
 
-Please report any issues on GitHub: https://github.com/yourusername/temp-monitor/issues
+Please report any issues on GitHub: https://github.com/danko1122/temp-monitor/issues
 
 ---
 

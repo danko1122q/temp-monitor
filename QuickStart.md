@@ -9,14 +9,14 @@ Get up and running with Ultimate Hardware Temperature Monitor in 5 minutes!
 ### One-Line Install
 
 ```bash
-git clone https://github.com/yourusername/temp-monitor.git && cd temp-monitor && chmod +x build.sh && ./build.sh --build
+git clone https://github.com/danko1122/temp-monitor.git && cd temp-monitor && chmod +x build.sh && ./build.sh --build
 ```
 
 ### Step by Step
 
 ```bash
 # 1. Clone
-git clone https://github.com/yourusername/temp-monitor.git
+git clone https://github.com/danko1122/temp-monitor.git
 cd temp-monitor
 
 # 2. Build

@@ -70,7 +70,7 @@ Controls: Ctrl+C=Exit │ F/C=Toggle Unit │ S=Stats │ Refresh: 2s
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/temp-monitor.git
+git clone https://github.com/danko1122/temp-monitor.git
 cd temp-monitor
 
 # Build the program
@@ -302,8 +302,8 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 📧 Contact
 
-- GitHub: [@yourusername](https://github.com/yourusername)
-- Email: your.email@example.com
+- GitHub: [@davaniko](https://github.com/danko1122)
+- Email: davaniko1122@gmail.com
 
 ## ⭐ Star History
 

@@ -47,7 +47,7 @@ Complete installation guide for Ultimate Hardware Temperature Monitor v0.0.1
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/temp-monitor.git
+git clone https://github.com/danko1122/temp-monitor.git
 cd temp-monitor
 
 # Make build script executable
@@ -68,7 +68,7 @@ tempmonitor
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/temp-monitor.git
+git clone https://github.com/danko1122/temp-monitor.git
 cd temp-monitor
 
 # Build
@@ -108,7 +108,7 @@ sudo dnf install git lm_sensors
 
 ### Step 2: Clone Repository
 ```bash
-git clone https://github.com/yourusername/temp-monitor.git
+git clone https://github.com/danko1122/temp-monitor.git
 cd temp-monitor
 ```
 
