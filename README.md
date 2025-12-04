@@ -1,401 +1,318 @@
-# 🌡️ Advanced Hardware Temperature Monitor
+# 🔥 Ultimate Hardware Temperature Monitor v0.0.1
 
-Monitor suhu hardware secara realtime untuk Linux (MX Linux/Debian/Ubuntu) dengan tampilan visual yang menarik dan fitur-fitur canggih.
+<div align="center">
 
-![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Version](https://img.shields.io/badge/version-0.0.1-green.svg)
 ![Platform](https://img.shields.io/badge/platform-Linux-orange.svg)
 
-## ✨ Fitur Utama
+**A powerful, real-time hardware temperature monitoring tool for Linux systems**
 
-- 🔍 **Auto-detect** semua sensor hardware (CPU, GPU, NVMe, Chipset, dll)
-- ⚡ **Realtime monitoring** dengan refresh rate yang dapat dikustomisasi
-- 🎨 **Visualisasi bar warna** berdasarkan tingkat suhu
-- 📊 **Statistik sistem** (rata-rata, min/max temperature)
-- 🌡️ **Celsius & Fahrenheit** support
-- 🖥️ **Multi-core CPU** detection
-- 💾 **NVMe SSD** temperature monitoring
-- 🎮 **GPU detection** (AMD, NVIDIA, Nouveau)
-- 📈 **Min/Max tracking** untuk setiap sensor
-- 🎯 **Zero dependencies** - hanya butuh GCC dan standard library
+Monitor CPU, GPU, NVMe, Chipset, and more with beautiful visual displays!
 
-## 📋 Persyaratan Sistem
+</div>
 
-### Minimal Requirements
-- **OS**: Linux (Ubuntu 18.04+, Debian 9+, MX Linux 19+)
-- **Compiler**: GCC 7.0+ atau Clang 5.0+
-- **Kernel**: Linux 3.10+ (dengan hwmon support)
-- **RAM**: 10 MB
-- **Privileges**: User biasa (tidak perlu root)
+---
 
-### Software Dependencies
+## ✨ Features
+
+- 🌡️ **Real-time Monitoring** - Live temperature updates with configurable refresh rates
+- 🎨 **Beautiful UI** - Color-coded temperature bars with Unicode box-drawing characters
+- 🔍 **Auto-detection** - Automatically detects all available hardware sensors
+- 📊 **Statistics** - Min/Max/Average temperature tracking
+- ⚠️ **Alerts** - Visual warnings for high and critical temperatures
+- 🖥️ **Multi-sensor Support** - CPU, GPU, NVMe, Chipset, Memory, VRM, and more
+- 🎯 **Modular Design** - Clean, maintainable code structure
+- 🚀 **Lightweight** - Minimal resource usage
+- 🎛️ **Flexible Configuration** - Multiple display modes and options
+
+## 📸 Screenshots
+
+```
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║         🔥 ULTIMATE HARDWARE TEMPERATURE MONITOR v0.0.1                      ║
+║  ⏰ 2024-12-04 15:30:45  │  ✓ Real-time Monitoring                          ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+┌─ ⚙ CPU SENSORS (8 detected) ──────────────────────────────────────────────────
+│ Core 0                             45.0°C [████████████░░░░░░░░] [40.0°C▸85.0°C]
+│ Core 1                             47.0°C [█████████████░░░░░░░] [41.0°C▸86.0°C]
+│ Core 2                             44.0°C [████████████░░░░░░░░] [40.0°C▸84.0°C]
+│ Package id 0                       48.0°C [█████████████░░░░░░░] [42.0°C▸87.0°C]
+
+┌─ 🎮 GPU SENSORS (1 detected) ──────────────────────────────────────────────────
+│ edge                               55.0°C [███████████████░░░░░] [50.0°C▸75.0°C]
+
+┌─ 💾 NVME SENSORS (2 detected) ─────────────────────────────────────────────────
+│ Composite                          42.0°C [███████████░░░░░░░░░] [38.0°C▸65.0°C]
+│ Sensor 1                           40.0°C [██████████░░░░░░░░░░] [36.0°C▸62.0°C]
+
+┌─ 📊 SYSTEM STATISTICS ─────────────────────────────────────────────────────────
+│ CPU Statistics:  Average: 46.0°C  │  Peak: 87.0°C  │  Min: 40.0°C
+│ GPU Statistics:  Average: 55.0°C  │  Peak: 75.0°C
+│ System Status:   Active Sensors: 11
+└────────────────────────────────────────────────────────────────────────────────
+
+Temperature Ranges: <40°C 40-50°C 50-60°C 60-70°C 70-80°C 80-90°C >90°C
+Controls: Ctrl+C=Exit │ F/C=Toggle Unit │ S=Stats │ Refresh: 2s
+```
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Linux system (tested on MX Linux, Ubuntu, Debian, Arch)
+- GCC compiler
+- Make build system
+- lm-sensors (recommended)
+
+### Installation
+
 ```bash
-# Install build tools (jika belum ada)
-sudo apt install build-essential
+# Clone the repository
+git clone https://github.com/yourusername/temp-monitor.git
+cd temp-monitor
 
-# Install lm-sensors (untuk deteksi sensor yang lebih baik)
+# Build the program
+make
+
+# Install system-wide (optional)
+sudo make install
+
+# Or just run directly
+./bin/tempmonitor
+```
+
+### First Run Setup
+
+If no sensors are detected, run:
+
+```bash
+# Setup lm-sensors (automated)
+make setup-sensors
+
+# Or manually:
 sudo apt install lm-sensors
+sudo sensors-detect --auto
+sudo systemctl restart kmod
+
+# Load kernel modules
+make load-modules
+
+# Verify sensors
+make check-modules
 ```
 
-## 🚀 Cara Build & Install
-
-### 1️⃣ Clone atau Download Source Code
-
-```bash
-# Buat direktori project
-mkdir -p ~/projects/temp-monitor
-cd ~/projects/temp-monitor
-
-# Download file check_temp.c dan README.md
-# (atau copy dari artifact)
-```
-
-### 2️⃣ Compile Program
-
-#### Opsi 1: Build Standar
-```bash
-gcc -o check_temp check_temp.c -Wall -O2
-```
-
-#### Opsi 2: Build dengan Optimasi Tinggi
-```bash
-gcc -o check_temp check_temp.c -Wall -O3 -march=native -flto
-```
-
-#### Opsi 3: Build untuk Debugging
-```bash
-gcc -o check_temp check_temp.c -Wall -g -O0
-```
-
-### 3️⃣ Verifikasi Build
-```bash
-# Cek apakah binary berhasil dibuat
-ls -lh check_temp
-
-# Test jalankan
-./check_temp --help
-```
-
-### 4️⃣ Install ke System (Opsional)
-
-```bash
-# Install ke /usr/local/bin
-sudo cp check_temp /usr/local/bin/
-sudo chmod +x /usr/local/bin/check_temp
-
-# Sekarang bisa dipanggil dari mana saja
-check_temp
-```
-
-## 📖 Cara Penggunaan
+## 📖 Usage
 
 ### Basic Usage
 
 ```bash
-# Jalankan dengan default settings (refresh 2 detik, Celsius)
-./check_temp
+# Run with default settings (2 second refresh)
+tempmonitor
 
-# Jalankan dengan refresh 1 detik
-./check_temp 1
+# Update every 1 second
+tempmonitor 1
 
-# Jalankan dengan refresh 5 detik
-./check_temp 5
+# Show statistics
+tempmonitor -s
+
+# Use Fahrenheit
+tempmonitor -f
+
+# Combine options
+tempmonitor -s -f 3
 ```
 
-### Advanced Options
+### Command Line Options
+
+| Option | Description |
+|--------|-------------|
+| `-h, --help` | Show help message |
+| `-v, --version` | Show version information |
+| `-f, --fahrenheit` | Use Fahrenheit instead of Celsius |
+| `-s, --stats` | Show detailed statistics |
+| `-l, --list` | List all detected sensors |
+| `-c, --compact` | Use compact display mode |
+| `[1-60]` | Refresh rate in seconds |
+
+### Keyboard Controls
+
+While monitoring:
+- `Ctrl+C` - Exit the program
+- `F` or `C` - Toggle between Fahrenheit/Celsius (coming soon)
+- `S` - Toggle statistics display (coming soon)
+
+## 🏗️ Project Structure
+
+```
+temp-monitor/
+├── main.c          # Main program entry point
+├── sensor.c        # Sensor detection and management
+├── sensor.h        # Sensor interface
+├── display.c       # Display and UI functions
+├── display.h       # Display interface
+├── utils.c         # Utility functions
+├── utils.h         # Utility interface
+├── Makefile        # Build system
+└── README.md       # This file
+```
+
+### Module Overview
+
+- **main.c** - Program initialization, argument parsing, main loop
+- **sensor.c** - Hardware sensor detection, temperature reading, statistics
+- **display.c** - Terminal UI, color output, temperature visualization
+- **utils.c** - File I/O, string manipulation, system utilities
+
+## 🔧 Build System
+
+### Available Make Targets
 
 ```bash
-# Tampilkan help
-./check_temp --help
-./check_temp -h
-
-# Tampilkan versi
-./check_temp --version
-./check_temp -v
-
-# Gunakan Fahrenheit
-./check_temp --fahrenheit
-./check_temp -f
-
-# Tampilkan statistik tambahan
-./check_temp --stats
-./check_temp -s
-
-# List semua sensor yang terdeteksi (tanpa monitoring)
-./check_temp --list
-./check_temp -l
-
-# Kombinasi options
-./check_temp -s -f 3        # Stats + Fahrenheit + refresh 3 detik
-./check_temp --stats 1      # Stats + refresh 1 detik
+make                # Build the program
+make debug          # Build with debug symbols
+make install        # Install to /usr/local/bin
+make uninstall      # Remove from system
+make clean          # Clean build files
+make run            # Build and run
+make run-stats      # Run with statistics
+make check-modules  # Check loaded modules
+make load-modules   # Load sensor modules
+make setup-sensors  # Install lm-sensors
+make list-sensors   # List detected sensors
+make help           # Show all targets
 ```
 
-### Contoh Output
+## 🌡️ Supported Sensors
 
-```
-╔══════════════════════════════════════════════════════════════════════╗
-║         ★ ADVANCED HARDWARE TEMPERATURE MONITOR v2.0.0 ★           ║
-║  2024-12-04 15:30:45  |  MX Linux Compatible                       ║
-╚══════════════════════════════════════════════════════════════════════╝
+### CPU Sensors
+- **Intel**: coretemp (Core series, Xeon)
+- **AMD**: k10temp (K10, K11, K12), zenpower (Ryzen)
 
-▓▓▓ CPU TEMPERATURES (8 sensors) ▓▓▓
-  Package id 0                    65.0°C  [████████████████░░░░] 
-  Core 0                          62.0°C  [██████████████░░░░░░]
-  Core 1                          64.0°C  [███████████████░░░░░]
-  Core 2                          66.0°C  [████████████████░░░░]
-  Core 3                          63.0°C  [███████████████░░░░░]
+### GPU Sensors
+- **AMD**: amdgpu (modern), radeon (legacy)
+- **NVIDIA**: nvidia (proprietary driver)
+- **Intel**: i915 (integrated graphics)
 
-▓▓▓ GPU TEMPERATURES (1 sensor) ▓▓▓
-  edge                            58.0°C  [█████████████░░░░░░░]
+### Storage Sensors
+- **NVMe**: All NVMe drives with temperature sensors
+- **SATA**: drivetemp module (kernel 5.6+)
 
-▓▓▓ NVME TEMPERATURES (1 sensor) ▓▓▓
-  Composite                       42.0°C  [█████████░░░░░░░░░░░]
+### Motherboard Sensors
+- **Chipset**: ACPI thermal zones, PCH sensors
+- **Super I/O**: NCT6775, IT87xx series
+- **VRM**: Voltage regulator temperatures
 
-══════════════════════════════════════════════════════════════════════
-Legend: <40°C 40-50°C 50-60°C 60-70°C 70-80°C 80-90°C >90°C
-Controls: Ctrl+C=Exit | F/C=Toggle °F/°C | S=Stats
-```
+## 🎨 Temperature Ranges
 
-## 🔧 Troubleshooting
+| Range | Color | Description |
+|-------|-------|-------------|
+| < 40°C | 🔵 Cyan | Cold/Idle |
+| 40-50°C | 🟢 Green | Safe |
+| 50-60°C | 🟢 Bright Green | Normal |
+| 60-70°C | 🟡 Yellow | Warm |
+| 70-80°C | 🟡 Bright Yellow | High |
+| 80-90°C | 🔴 Bright Red | Very High |
+| > 90°C | 🔥 Red Bold | Critical! |
 
-### Problem: Tidak Ada Sensor Terdeteksi
+## 🐛 Troubleshooting
 
-**Solusi 1: Load Kernel Modules**
+### No Sensors Detected
+
 ```bash
-# Untuk Intel CPU
-sudo modprobe coretemp
+# 1. Load kernel modules
+sudo modprobe coretemp k10temp
 
-# Untuk AMD CPU (pilih salah satu)
-sudo modprobe k10temp
-# atau
-sudo modprobe zenpower
-
-# Untuk GPU AMD
-sudo modprobe amdgpu
-
-# Untuk GPU NVIDIA (jika menggunakan driver proprietary)
-sudo modprobe nvidia
-```
-
-**Solusi 2: Setup lm-sensors**
-```bash
-# Install lm-sensors
-sudo apt update
-sudo apt install lm-sensors
-
-# Jalankan deteksi sensor
-sudo sensors-detect
-
-# Jawab 'YES' untuk semua pertanyaan
-# Restart service
-sudo systemctl restart kmod
-
-# Test dengan sensors
-sensors
-```
-
-**Solusi 3: Verifikasi Hardware Support**
-```bash
-# Cek apakah hwmon tersedia
+# 2. Check if sensors exist
 ls -la /sys/class/hwmon/
+sensors  # If lm-sensors is installed
 
-# Cek isi setiap hwmon
-for dir in /sys/class/hwmon/hwmon*; do
-    echo "=== $dir ==="
-    cat $dir/name 2>/dev/null
-    ls $dir/temp*_input 2>/dev/null
-done
+# 3. Verify permissions
+ls -l /sys/class/hwmon/hwmon*/temp*_input
 
-# Cek kernel modules yang loaded
-lsmod | grep -E 'coretemp|k10temp|zenpower|amdgpu|nvidia'
+# 4. Install lm-sensors
+sudo apt install lm-sensors
+sudo sensors-detect
 ```
 
-### Problem: Permission Denied
+### AMD Ryzen Users
+
+For better Ryzen support, install zenpower:
 
 ```bash
-# Pastikan file sensor readable
-ls -la /sys/class/hwmon/hwmon*/temp*_input
-
-# Jika tidak, tambahkan user ke group yang sesuai
-sudo usermod -a -G video $USER
-sudo usermod -a -G render $USER
-
-# Logout dan login kembali
-```
-
-### Problem: Suhu Tidak Akurat
-
-**Untuk AMD Ryzen:**
-```bash
-# Install zenpower (lebih akurat daripada k10temp untuk Ryzen)
+# Install DKMS and build tools
 sudo apt install dkms git
-git clone https://github.com/ocerman/zenpower.git
-cd zenpower
+
+# Clone and install zenpower
+git clone https://github.com/ocerman/zenpower3.git
+cd zenpower3
 make
 sudo make install
 sudo modprobe zenpower
 
-# Blacklist k10temp
+# Blacklist k10temp (optional)
 echo "blacklist k10temp" | sudo tee /etc/modprobe.d/blacklist-k10temp.conf
-sudo update-initramfs -u
 ```
 
-**Untuk Intel:**
+### Permission Issues
+
+If you get permission errors:
+
 ```bash
-# Pastikan coretemp di-load
-sudo modprobe coretemp
-lsmod | grep coretemp
+# Add your user to the appropriate group
+sudo usermod -aG systemd-journal $USER
+
+# Or run with sudo (not recommended for monitoring)
+sudo tempmonitor
 ```
 
-### Problem: Kompilasi Error
+## 🔮 Planned Features
 
-**Error: `implicit declaration of function 'tolower'`**
-- Sudah diperbaiki di versi 2.0.0 dengan `#include <ctype.h>`
-
-**Error: `format-truncation warning`**
-- Ini hanya warning, bukan error
-- Program tetap bisa jalan
-- Sudah diperbaiki dengan buffer size yang lebih besar
-
-## 📊 Color Legend
-
-| Warna | Suhu | Status |
-|-------|------|--------|
-| 🔵 Cyan | < 40°C | Dingin |
-| 🟢 Green | 40-50°C | Aman |
-| 🟢 Light Green | 50-60°C | Normal |
-| 🟡 Yellow | 60-70°C | Hangat |
-| 🟡 Light Yellow | 70-80°C | Tinggi |
-| 🔴 Light Red | 80-90°C | Sangat Tinggi |
-| 🔴 **Red Bold** | > 90°C | **BAHAYA!** |
-
-## 🎯 Tested On
-
-- ✅ MX Linux 21, 23
-- ✅ Ubuntu 20.04, 22.04, 24.04
-- ✅ Debian 11, 12
-- ✅ Linux Mint 20, 21
-- ✅ Pop!_OS 22.04
-
-### Hardware Support
-
-**CPU:**
-- ✅ Intel Core (Sandy Bridge dan lebih baru)
-- ✅ AMD Ryzen (semua generasi)
-- ✅ AMD FX, A-Series
-- ✅ AMD EPYC, Threadripper
-
-**GPU:**
-- ✅ AMD Radeon (dengan driver amdgpu)
-- ✅ NVIDIA (dengan driver proprietary)
-- ✅ Intel Integrated Graphics
-
-**Storage:**
-- ✅ NVMe SSD (Samsung, WD, Crucial, dll)
-- ✅ SATA SSD dengan S.M.A.R.T support
-
-## 🔄 Auto-start on Boot (Optional)
-
-### Systemd Service
-
-Buat file `/etc/systemd/system/temp-monitor.service`:
-
-```ini
-[Unit]
-Description=Hardware Temperature Monitor
-After=multi-user.target
-
-[Service]
-Type=simple
-ExecStart=/usr/local/bin/check_temp 5
-StandardOutput=journal
-StandardError=journal
-Restart=always
-User=dava
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Enable service:
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable temp-monitor.service
-sudo systemctl start temp-monitor.service
-
-# Check status
-sudo systemctl status temp-monitor.service
-```
-
-## 📝 Tips & Tricks
-
-### 1. Monitor dalam Background
-```bash
-# Jalankan di background
-./check_temp 5 &
-
-# Lihat dengan screen atau tmux
-screen -S temp
-./check_temp 1
-# Ctrl+A, D untuk detach
-```
-
-### 2. Export ke Log File
-```bash
-# Redirect output ke file
-./check_temp 10 > temp_log.txt 2>&1 &
-
-# Monitor dengan tail
-tail -f temp_log.txt
-```
-
-### 3. Alert untuk Suhu Tinggi
-Tambahkan script untuk alert:
-```bash
-#!/bin/bash
-while true; do
-    temp=$(sensors | grep "Package id 0" | awk '{print $4}' | cut -d'.' -f1 | tr -d '+')
-    if [ "$temp" -gt 80 ]; then
-        notify-send "⚠️ CPU Overheat!" "Temperature: ${temp}°C"
-    fi
-    sleep 30
-done
-```
+- [ ] Interactive keyboard controls
+- [ ] Temperature history graphs
+- [ ] Fan speed monitoring and control
+- [ ] Logging to file
+- [ ] JSON/CSV export
+- [ ] Web interface
+- [ ] System tray integration
+- [ ] Email/notification alerts
+- [ ] Custom sensor thresholds
+- [ ] Multiple color themes
 
 ## 🤝 Contributing
 
-Kontribusi sangat diterima! Silakan:
-1. Fork repository
-2. Buat branch untuk fitur baru
-3. Commit changes
-4. Push ke branch
-5. Buat Pull Request
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-## 📄 License
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-MIT License - Bebas digunakan untuk personal maupun komersial
+## 📝 License
 
-## 👨‍💻 Author
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-**Dava**
-- Platform: MX Linux
-- Version: 2.0.0
-- Last Update: December 2024
+## 🙏 Acknowledgments
 
-## 🔗 Resources
+- Linux kernel developers for the hwmon subsystem
+- lm-sensors project for sensor detection utilities
+- All contributors and users of this project
 
-- [Linux Hardware Monitoring](https://www.kernel.org/doc/html/latest/hwmon/index.html)
-- [lm-sensors Project](https://github.com/lm-sensors/lm-sensors)
-- [sysfs Documentation](https://www.kernel.org/doc/Documentation/filesystems/sysfs.txt)
+## 📧 Contact
 
-## 📞 Support
+- GitHub: [@yourusername](https://github.com/yourusername)
+- Email: your.email@example.com
 
-Jika mengalami masalah:
-1. Baca bagian Troubleshooting di atas
-2. Jalankan `./check_temp --list` untuk cek sensor
-3. Jalankan `sensors` untuk verifikasi
-4. Cek `dmesg | grep -i hwmon` untuk error kernel
+## ⭐ Star History
+
+If you find this project useful, please consider giving it a star!
 
 ---
 
-**⭐ Jika program ini bermanfaat, jangan lupa beri star!**
+<div align="center">
+
+**Made with ❤️ for the Linux community**
+
+</div>

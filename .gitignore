@@ -1,0 +1,92 @@
+# Build directories
+build/
+bin/
+obj/
+dist/
+
+# Compiled object files
+*.o
+*.obj
+*.so
+*.a
+*.lib
+
+# Executables
+tempmonitor
+tempmonitor-debug
+*.exe
+*.out
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Editor and IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.bak
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+
+# Dependency files
+*.d
+
+# Core dumps
+core
+core.*
+
+# Log files
+*.log
+
+# Backup files
+*~
+*.orig
+
+# Documentation build
+docs/_build/
+
+# Python (if any scripts)
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+env/
+
+# Tags
+tags
+TAGS
+
+# Valgrind
+*.memcheck
+vgcore.*
+
+# Temporary files
+*.tmp
+temp/
+tmp/
+
+# Archives
+*.tar.gz
+*.zip
+*.rar
+
+# Mac
+.DS_Store
+
+# Linux
+*~
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
