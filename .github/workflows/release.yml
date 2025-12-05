@@ -52,10 +52,10 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: temp-${{ matrix.target }} # DIKEMBALIKAN KE NAMA ARTIFACT ASLI
+          name: temp-${{ matrix.target }} # Menggunakan nama artifact asli
           path: dist/temp-${{ matrix.target }}
 
-  # JOB PERBAIKAN: Menggunakan jalur copy yang paling sederhana
+  # JOB PERBAIKAN: Ditambahkan langkah debugging untuk menemukan jalur artifact
   package-and-test:
     name: Create Debian Package and Test Specs
     needs: build
@@ -65,12 +65,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. Download Binary Artifact (Kita akan tahu nama folder artifact)
+      # 1. Download Binary Artifact 
       - name: Download x86_64 Binary Artifact
         uses: actions/download-artifact@v4
         with:
-          name: temp-x86_64-linux-gnu # NAMA ARTIFACT YANG AKAN DIUNDUH
-          path: artifacts # Folder yang menerima unduhan (tempat artifact akan diekstrak)
+          name: temp-x86_64-linux-gnu 
+          path: artifacts # Folder tempat unduhan akan diekstrak
+
+      # LANGKAH DEBUGGING BARU: Mencetak isi folder artifacts untuk melihat jalur file yang sebenarnya
+      - name: List Artifact Content (DEBUG)
+        run: |
+          echo "Listing contents of downloaded artifacts:"
+          # Menggunakan find untuk melihat struktur folder secara rinci
+          find artifacts/
 
       - name: Setup Package Build Environment
         run: |
@@ -85,8 +92,8 @@ jobs:
           # Pindahkan binary ke lokasi yang diharapkan oleh dpkg-buildpackage
           mkdir -p bin 
           
-          # PERBAIKAN KRUSIAL: ASUMSI JALUR ADALAH ARTIFACT-NAME/FILE-NAME
-          # Jika error lagi, kita akan tahu bahwa nama folder artifactnya adalah 'artifacts' itu sendiri.
+          # JALUR SEMENTARA (PERLU DIGANTI NANTI SETELAH DEBUG)
+          # Kita tetap menggunakan jalur prediksi terakhir. Jika gagal, log debugging akan menunjukkan yang benar.
           cp artifacts/temp-x86_64-linux-gnu/temp-x86_64-linux-gnu bin/temp 
           
           # Bangun paket .deb
@@ -189,7 +196,7 @@ jobs:
             
             Use GitHub's auto-generated source archive:
             ```
-            [https://github.com/danko1122/temp-monitor/archive/refs/tags/$](https://github.com/danko1122/temp-monitor/archive/refs/tags/$){{ github.ref_name }}.tar.gz
+            [https://github.com/danko1122q/temp-monitor/archive/refs/tags/$](https://github.com/danko1122q/temp-monitor/archive/refs/tags/$){{ github.ref_name }}.tar.gz
             ```
             
             See [CHANGELOG.md](CHANGELOG.md) for details.
