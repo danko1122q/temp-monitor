@@ -1,0 +1,15 @@
+Source: temp
+Section: utils
+Priority: optional
+Maintainer: Danko <davaniko1122@gmail.com>
+Build-Depends: debhelper (>= 10), gcc, make
+Standards-Version: 4.5.0
+Homepage: https://github.com/danko1122/temp-monitor
+
+Package: temp
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Hardware temperature monitor for Linux
+ Real-time terminal-based temperature monitoring tool.
+ Supports CPU, GPU, NVMe, chipset, and fan sensors.
+ Auto-detects sensors from hwmon subsystem.

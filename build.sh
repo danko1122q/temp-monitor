@@ -13,7 +13,7 @@ PROJECT_NAME="Ultimate Hardware Temperature Monitor"
 VERSION="0.0.1"
 BUILD_DIR="build"
 BIN_DIR="bin"
-TARGET="tempmonitor"
+TARGET="temp"
 
 print_msg() {
     local color="$1"
@@ -246,18 +246,18 @@ install_system() {
     
     print_msg "$YELLOW" "[*] Installing to /usr/local/bin..."
     
-    sudo cp "$BIN_DIR/$TARGET" /usr/local/bin/
-    sudo chmod +x "/usr/local/bin/$TARGET"
+    sudo cp "$BIN_DIR/$TARGET" /usr/local/bin/temp
+    sudo chmod +x "/usr/local/bin/temp"
     
     print_msg "$GREEN" "[+] Installation completed!"
-    print_msg "$CYAN" "You can now run: $TARGET"
+    print_msg "$CYAN" "You can now run: temp"
     echo ""
 }
 
 uninstall_system() {
     print_msg "$YELLOW" "[*] Uninstalling from /usr/local/bin..."
     
-    sudo rm -f "/usr/local/bin/$TARGET"
+    sudo rm -f "/usr/local/bin/temp"
     
     print_msg "$GREEN" "[+] Uninstallation completed!"
     echo ""

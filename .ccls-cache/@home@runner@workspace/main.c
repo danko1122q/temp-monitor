@@ -7,7 +7,7 @@
 #include "display.h"
 #include "utils.h"
 
-#define VERSION "0.0.2"
+#define VERSION "0.0.1"
 
 volatile sig_atomic_t keep_running = 1;
 TempSensor sensors[MAX_SENSORS];
@@ -16,7 +16,7 @@ DisplayConfig config = {
     .use_celsius = 1,
     .show_stats = 0,
     .show_graphs = 0,
-    .show_fans = 0,
+    .show_fans = 1,
     .compact_mode = 0,
     .color_mode = 1,
     .refresh_rate = 2
@@ -46,6 +46,8 @@ void print_help(const char *prog_name) {
     printf("  " COLOR_YELLOW "-s, --stats" COLOR_RESET "         Show detailed statistics\n");
     printf("  " COLOR_YELLOW "-l, --list" COLOR_RESET "          List all detected sensors and exit\n");
     printf("  " COLOR_YELLOW "-c, --compact" COLOR_RESET "       Use compact display mode\n");
+    printf("  " COLOR_YELLOW "-F, --fans" COLOR_RESET "          Show fan speed monitoring\n");
+    printf("  " COLOR_YELLOW "-n, --no-fans" COLOR_RESET "       Disable fan speed monitoring\n");
     printf("  " COLOR_YELLOW "-g, --graphs" COLOR_RESET "        Show temperature graphs (coming soon)\n");
     
     printf("\n" COLOR_BOLD COLOR_GREEN "ARGUMENTS:\n" COLOR_RESET);
@@ -195,6 +197,10 @@ void parse_arguments(int argc, char *argv[]) {
             exit(0);
         } else if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "--compact") == 0) {
             config.compact_mode = 1;
+        } else if (strcmp(argv[i], "-F") == 0 || strcmp(argv[i], "--fans") == 0) {
+            config.show_fans = 1;
+        } else if (strcmp(argv[i], "-n") == 0 || strcmp(argv[i], "--no-fans") == 0) {
+            config.show_fans = 0;
         } else if (strcmp(argv[i], "-g") == 0 || strcmp(argv[i], "--graphs") == 0) {
             config.show_graphs = 1;
             printf(COLOR_YELLOW "Note: Graph feature is coming soon!\n" COLOR_RESET);

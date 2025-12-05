@@ -6,8 +6,18 @@
 #include <dirent.h>
 #include <unistd.h>
 
+#define SAFE_PATH_LEN 256
+
 static void get_sensor_name(const char *hwmon_path, char *name, size_t size) {
     char path[MAX_PATH];
+    size_t hwmon_len = strlen(hwmon_path);
+    
+    if (hwmon_len > SAFE_PATH_LEN) {
+        strncpy(name, "Unknown", size - 1);
+        name[size - 1] = '\0';
+        return;
+    }
+    
     snprintf(path, sizeof(path), "%s/name", hwmon_path);
     
     if (!read_file(path, name, size)) {
@@ -22,9 +32,15 @@ static void get_sensor_name(const char *hwmon_path, char *name, size_t size) {
 static void get_sensor_label(const char *base_path, const char *temp_file, char *label, size_t size) {
     char path[MAX_PATH];
     char temp_num[16];
+    size_t base_len = strlen(base_path);
+    
+    if (base_len > SAFE_PATH_LEN) {
+        snprintf(label, size, "Sensor");
+        return;
+    }
     
     if (sscanf(temp_file, "temp%15[^_]", temp_num) != 1) {
-        strncpy(label, "Unknown", size - 1);
+        snprintf(label, size, "Unknown");
         return;
     }
     
@@ -42,9 +58,15 @@ static double get_critical_temp(const char *base_path, const char *temp_file) {
     char path[MAX_PATH];
     char temp_num[16];
     char buffer[32];
+    double crit_temp;
+    size_t base_len = strlen(base_path);
+    
+    if (base_len > SAFE_PATH_LEN) {
+        return 90.0;
+    }
     
     if (sscanf(temp_file, "temp%15[^_]", temp_num) != 1) {
-        return 100.0;
+        return 90.0;
     }
     
     snprintf(path, sizeof(path), "%s/temp%s_crit", base_path, temp_num);
@@ -52,11 +74,16 @@ static double get_critical_temp(const char *base_path, const char *temp_file) {
     if (!read_file(path, buffer, sizeof(buffer))) {
         snprintf(path, sizeof(path), "%s/temp%s_max", base_path, temp_num);
         if (!read_file(path, buffer, sizeof(buffer))) {
-            return 100.0;
+            return 90.0;
         }
     }
     
-    return parse_double(buffer, 100000.0) / 1000.0;
+    crit_temp = parse_double(buffer, 90000.0) / 1000.0;
+    
+    if (crit_temp < 50.0) crit_temp = 50.0;
+    if (crit_temp > 150.0) crit_temp = 100.0;
+    
+    return crit_temp;
 }
 
 SensorType detect_sensor_type(const char *name, const char *label, const char *path) {
@@ -65,10 +92,11 @@ SensorType detect_sensor_type(const char *name, const char *label, const char *p
     
     (void)path;
     
+    memset(name_lower, 0, sizeof(name_lower));
+    memset(label_lower, 0, sizeof(label_lower));
+    
     strncpy(name_lower, name, sizeof(name_lower) - 1);
-    name_lower[sizeof(name_lower) - 1] = '\0';
     strncpy(label_lower, label, sizeof(label_lower) - 1);
-    label_lower[sizeof(label_lower) - 1] = '\0';
     str_tolower(name_lower);
     str_tolower(label_lower);
     
@@ -92,8 +120,7 @@ SensorType detect_sensor_type(const char *name, const char *label, const char *p
         str_contains(name_lower, "i915") ||
         str_contains(label_lower, "gpu") ||
         str_contains(label_lower, "edge") ||
-        str_contains(label_lower, "junction") ||
-        str_contains(label_lower, "mem") ) {
+        str_contains(label_lower, "junction")) {
         return SENSOR_GPU;
     }
     
@@ -169,6 +196,11 @@ int read_fan_speed(const char *path) {
 int read_fan_max(const char *hwmon_path, const char *fan_num) {
     char path[MAX_PATH];
     char buffer[32];
+    size_t hwmon_len = strlen(hwmon_path);
+    
+    if (hwmon_len > SAFE_PATH_LEN) {
+        return 5000;
+    }
     
     snprintf(path, sizeof(path), "%s/fan%s_max", hwmon_path, fan_num);
     if (read_file(path, buffer, sizeof(buffer))) {
@@ -235,42 +267,52 @@ void update_fan_data(TempSensor *sensor) {
 }
 
 static int scan_fans_for_hwmon(const char *hwmon_path, TempSensor *sensors, int sensor_count) {
-    DIR *dir = opendir(hwmon_path);
-    if (!dir) return 0;
-    
+    DIR *dir;
     struct dirent *entry;
     int fans_found = 0;
+    size_t hwmon_len = strlen(hwmon_path);
+    
+    if (hwmon_len > SAFE_PATH_LEN) {
+        return 0;
+    }
+    
+    dir = opendir(hwmon_path);
+    if (!dir) return 0;
     
     while ((entry = readdir(dir)) != NULL) {
-        if (str_contains(entry->d_name, "fan") && 
-            str_endswith(entry->d_name, "_input")) {
-            
-            char fan_num[8];
-            if (sscanf(entry->d_name, "fan%7[^_]", fan_num) != 1) {
-                continue;
-            }
-            
-            char fan_path[MAX_PATH];
-            snprintf(fan_path, sizeof(fan_path), "%s/%s", hwmon_path, entry->d_name);
-            
-            int fan_rpm = read_fan_speed(fan_path);
-            if (fan_rpm < 0) continue;
-            
-            int fan_max = read_fan_max(hwmon_path, fan_num);
-            
-            for (int i = 0; i < sensor_count; i++) {
-                if (str_contains(sensors[i].path, hwmon_path) && !sensors[i].has_fan) {
-                    sensors[i].has_fan = 1;
-                    strncpy(sensors[i].fan_path, fan_path, sizeof(sensors[i].fan_path) - 1);
-                    sensors[i].fan_path[sizeof(sensors[i].fan_path) - 1] = '\0';
-                    sensors[i].fan_max_rpm = fan_max;
-                    sensors[i].fan_speed_rpm = fan_rpm;
-                    if (fan_max > 0) {
-                        sensors[i].fan_speed_percent = (fan_rpm * 100) / fan_max;
-                    }
-                    fans_found++;
-                    break;
+        char fan_num[8];
+        char fan_path[MAX_PATH];
+        int fan_rpm;
+        int fan_max;
+        int i;
+        
+        if (!str_contains(entry->d_name, "fan") || !str_endswith(entry->d_name, "_input")) {
+            continue;
+        }
+        
+        if (sscanf(entry->d_name, "fan%7[^_]", fan_num) != 1) {
+            continue;
+        }
+        
+        snprintf(fan_path, sizeof(fan_path), "%s/%s", hwmon_path, entry->d_name);
+        
+        fan_rpm = read_fan_speed(fan_path);
+        if (fan_rpm < 0) continue;
+        
+        fan_max = read_fan_max(hwmon_path, fan_num);
+        
+        for (i = 0; i < sensor_count; i++) {
+            if (str_contains(sensors[i].path, hwmon_path) && !sensors[i].has_fan) {
+                sensors[i].has_fan = 1;
+                memset(sensors[i].fan_path, 0, sizeof(sensors[i].fan_path));
+                snprintf(sensors[i].fan_path, sizeof(sensors[i].fan_path), "%s", fan_path);
+                sensors[i].fan_max_rpm = fan_max;
+                sensors[i].fan_speed_rpm = fan_rpm;
+                if (fan_max > 0) {
+                    sensors[i].fan_speed_percent = (fan_rpm * 100) / fan_max;
                 }
+                fans_found++;
+                break;
             }
         }
     }
@@ -280,16 +322,18 @@ static int scan_fans_for_hwmon(const char *hwmon_path, TempSensor *sensors, int 
 }
 
 int scan_fan_sensors(TempSensor *sensors, int count) {
-    DIR *dir = opendir(HWMON_PATH);
-    if (!dir) return 0;
-    
+    DIR *dir;
     struct dirent *entry;
     int total_fans = 0;
     
+    dir = opendir(HWMON_PATH);
+    if (!dir) return 0;
+    
     while ((entry = readdir(dir)) != NULL) {
+        char hwmon_path[MAX_PATH];
+        
         if (entry->d_name[0] == '.') continue;
         
-        char hwmon_path[MAX_PATH];
         snprintf(hwmon_path, sizeof(hwmon_path), "%s/%s", HWMON_PATH, entry->d_name);
         
         if (!dir_exists(hwmon_path)) continue;
@@ -302,51 +346,58 @@ int scan_fan_sensors(TempSensor *sensors, int count) {
 }
 
 int scan_hwmon_sensors(TempSensor *sensors, int *count) {
-    DIR *dir = opendir(HWMON_PATH);
-    if (!dir) return 0;
-    
+    DIR *dir;
     struct dirent *entry;
     int found = 0;
     
+    dir = opendir(HWMON_PATH);
+    if (!dir) return 0;
+    
     while ((entry = readdir(dir)) != NULL && *count < MAX_SENSORS) {
+        char hwmon_path[MAX_PATH];
+        char sensor_name[MAX_NAME_LEN];
+        DIR *hwmon_dir;
+        struct dirent *temp_entry;
+        
         if (entry->d_name[0] == '.') continue;
         
-        char hwmon_path[MAX_PATH];
         snprintf(hwmon_path, sizeof(hwmon_path), "%s/%s", HWMON_PATH, entry->d_name);
         
         if (!dir_exists(hwmon_path)) continue;
         
-        char sensor_name[MAX_NAME_LEN];
         get_sensor_name(hwmon_path, sensor_name, sizeof(sensor_name));
         
-        DIR *hwmon_dir = opendir(hwmon_path);
+        hwmon_dir = opendir(hwmon_path);
         if (!hwmon_dir) continue;
         
-        struct dirent *temp_entry;
         while ((temp_entry = readdir(hwmon_dir)) != NULL && *count < MAX_SENSORS) {
-            if (str_contains(temp_entry->d_name, "temp") && 
-                str_endswith(temp_entry->d_name, "_input")) {
-                
-                TempSensor *s = &sensors[*count];
-                memset(s, 0, sizeof(TempSensor));
-                
-                get_sensor_label(hwmon_path, temp_entry->d_name, s->label, sizeof(s->label));
-                strncpy(s->name, sensor_name, sizeof(s->name) - 1);
-                s->name[sizeof(s->name) - 1] = '\0';
-                snprintf(s->path, sizeof(s->path), "%s/%s", hwmon_path, temp_entry->d_name);
-                
-                s->type = detect_sensor_type(sensor_name, s->label, s->path);
-                s->temp_critical = get_critical_temp(hwmon_path, temp_entry->d_name);
-                s->temp_max = -999.0;
-                s->temp_min = 999.0;
-                s->read_count = 0;
-                s->active = 1;
-                s->has_fan = 0;
-                s->fan_path[0] = '\0';
-                
-                (*count)++;
-                found++;
+            TempSensor *s;
+            
+            if (!str_contains(temp_entry->d_name, "temp") || !str_endswith(temp_entry->d_name, "_input")) {
+                continue;
             }
+            
+            s = &sensors[*count];
+            memset(s, 0, sizeof(TempSensor));
+            
+            get_sensor_label(hwmon_path, temp_entry->d_name, s->label, sizeof(s->label));
+            
+            memset(s->name, 0, sizeof(s->name));
+            snprintf(s->name, sizeof(s->name), "%s", sensor_name);
+            
+            snprintf(s->path, sizeof(s->path), "%s/%s", hwmon_path, temp_entry->d_name);
+            
+            s->type = detect_sensor_type(sensor_name, s->label, s->path);
+            s->temp_critical = get_critical_temp(hwmon_path, temp_entry->d_name);
+            s->temp_max = -999.0;
+            s->temp_min = 999.0;
+            s->read_count = 0;
+            s->active = 1;
+            s->has_fan = 0;
+            s->fan_path[0] = '\0';
+            
+            (*count)++;
+            found++;
         }
         closedir(hwmon_dir);
     }
@@ -356,39 +407,48 @@ int scan_hwmon_sensors(TempSensor *sensors, int *count) {
 }
 
 int scan_thermal_sensors(TempSensor *sensors, int *count) {
-    DIR *dir = opendir(THERMAL_PATH);
-    if (!dir) return 0;
-    
+    DIR *dir;
     struct dirent *entry;
     int found = 0;
     
+    dir = opendir(THERMAL_PATH);
+    if (!dir) return 0;
+    
     while ((entry = readdir(dir)) != NULL && *count < MAX_SENSORS) {
+        char zone_path[MAX_PATH];
+        char temp_path[MAX_PATH];
+        char type_path[MAX_PATH];
+        char type_buf[MAX_NAME_LEN];
+        TempSensor *s;
+        
         if (!str_startswith(entry->d_name, "thermal_zone")) continue;
         
-        char zone_path[MAX_PATH];
-        snprintf(zone_path, sizeof(zone_path), "%s/%s", THERMAL_PATH, entry->d_name);
+        if (strlen(entry->d_name) > SAFE_PATH_LEN) continue;
         
-        char temp_path[MAX_PATH];
+        snprintf(zone_path, sizeof(zone_path), "%s/%s", THERMAL_PATH, entry->d_name);
         snprintf(temp_path, sizeof(temp_path), "%s/temp", zone_path);
         
         if (!file_exists(temp_path)) continue;
         
-        TempSensor *s = &sensors[*count];
+        s = &sensors[*count];
         memset(s, 0, sizeof(TempSensor));
         
-        char type_buf[MAX_NAME_LEN];
-        char type_path[MAX_PATH];
         snprintf(type_path, sizeof(type_path), "%s/type", zone_path);
         
         if (read_file(type_path, type_buf, sizeof(type_buf))) {
             str_trim(type_buf);
-            strncpy(s->label, type_buf, sizeof(s->label) - 1);
+            memset(s->label, 0, sizeof(s->label));
+            snprintf(s->label, sizeof(s->label), "%s", type_buf);
         } else {
-            snprintf(s->label, sizeof(s->label), "Thermal Zone %s", entry->d_name + 12);
+            snprintf(s->label, sizeof(s->label), "Zone %s", entry->d_name + 12);
         }
         
-        strncpy(s->name, "thermal", sizeof(s->name) - 1);
-        strncpy(s->path, temp_path, sizeof(s->path) - 1);
+        memset(s->name, 0, sizeof(s->name));
+        snprintf(s->name, sizeof(s->name), "thermal");
+        
+        memset(s->path, 0, sizeof(s->path));
+        snprintf(s->path, sizeof(s->path), "%s", temp_path);
+        
         s->type = SENSOR_CHIPSET;
         s->temp_critical = 100.0;
         s->temp_max = -999.0;
@@ -422,11 +482,12 @@ int scan_temperature_sensors(TempSensor *sensors) {
 }
 
 void calculate_system_stats(TempSensor *sensors, int count, SystemStats *stats) {
-    memset(stats, 0, sizeof(SystemStats));
+    int i;
     
+    memset(stats, 0, sizeof(SystemStats));
     stats->min_cpu_temp = 999.0;
     
-    for (int i = 0; i < count; i++) {
+    for (i = 0; i < count; i++) {
         if (!sensors[i].active || sensors[i].temp_current < -500) continue;
         
         stats->total_active_sensors++;

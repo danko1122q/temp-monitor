@@ -1,0 +1,19 @@
+pkgname=temp
+pkgver=0.0.1
+pkgrel=0
+pkgdesc="Hardware temperature monitor for Linux"
+url="https://github.com/danko1122/temp-monitor"
+arch="x86_64 aarch64 x86"
+license="MIT"
+makedepends="gcc make musl-dev"
+source="$pkgname-$pkgver.tar.gz"
+
+build() {
+    make
+}
+
+package() {
+    install -Dm755 bin/temp "$pkgdir"/usr/bin/temp
+}
+
+sha512sums="SKIP"
