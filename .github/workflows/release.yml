@@ -52,10 +52,10 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: temp-${{ matrix.target }}
+          name: ${{ matrix.target }} # PERBAIKAN: Nama artifact diubah untuk menghindari konflik path
           path: dist/temp-${{ matrix.target }}
 
-  # JOB BARU/MODIFIKASI: Membuat dan Mengunggah Paket Debian
+  # JOB PERBAIKAN: Mengatasi masalah jalur artifact
   package-and-test:
     name: Create Debian Package and Test Specs
     needs: build
@@ -65,11 +65,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. Download Binary Artifact (Artifact akan disimpan di folder artifacts/temp-x86_64-linux-gnu/)
+      # 1. Download Binary Artifact (Mengunduh artifact bernama x86_64-linux-gnu)
       - name: Download x86_64 Binary Artifact
         uses: actions/download-artifact@v4
         with:
-          name: temp-x86_64-linux-gnu 
+          name: x86_64-linux-gnu # NAMA ARTIFACT YANG BARU
           path: artifacts 
 
       - name: Setup Package Build Environment
@@ -84,8 +84,8 @@ jobs:
           
           # Pindahkan binary ke lokasi yang diharapkan oleh dpkg-buildpackage
           mkdir -p bin 
-          # JALUR SUDAH DIPERBAIKI: Mengakses binary di dalam folder artifact
-          cp artifacts/temp-x86_64-linux-gnu/temp-x86_64-linux-gnu bin/temp
+          # JALUR FINAL DIPERBAIKI: Nama folder sesuai artifact. Nama file sesuai output 'Prepare artifact'
+          cp artifacts/x86_64-linux-gnu/temp-x86_64-linux-gnu bin/temp
           
           # Bangun paket .deb
           dpkg-buildpackage -us -uc -b
@@ -104,7 +104,6 @@ jobs:
       - name: Test RPM spec syntax
         run: |
           rpmlint packaging/rpm/temp.spec || true
-          # NOTE: Tambahkan langkah build RPM di sini jika Anda ingin .rpm diunggah juga.
 
   # JOB MODIFIKASI: Mengunduh semua aset (Binary + Paket) dan Membuat Rilis
   release:
@@ -118,6 +117,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # DOWNLOAD SEMUA ARTIFACT: Termasuk yang namanya baru (x86_64-linux-gnu, aarch64-linux-gnu)
       - name: Download all artifacts (Binaries & Packages)
         uses: actions/download-artifact@v4
         with:
@@ -128,10 +128,10 @@ jobs:
           VERSION=${GITHUB_REF#refs/tags/v}
           mkdir -p release
           
-          # Binaries from build artifacts
-          cp artifacts/temp-x86_64-linux-gnu/temp-x86_64-linux-gnu \
+          # Binaries from build artifacts (JALUR DISESUAIKAN DENGAN NAMA ARTIFACT BARU)
+          cp artifacts/x86_64-linux-gnu/temp-x86_64-linux-gnu \
              release/temp-$VERSION-linux-x86_64
-          cp artifacts/temp-aarch64-linux-gnu/temp-aarch64-linux-gnu \
+          cp artifacts/aarch64-linux-gnu/temp-aarch64-linux-gnu \
              release/temp-$VERSION-linux-aarch64
           
           # AMBIL PAKET DEBIAN BARU
@@ -141,14 +141,13 @@ jobs:
           
           # Generate checksums for binaries and packages
           cd release
-          # Checksum sekarang mencakup binary DAN paket .deb
           sha256sum * > SHA256SUMS.txt
           sha512sum * > SHA512SUMS.txt
           
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: release/* # Ini mencakup Binary, Checksum, dan Paket .deb
+          files: release/*
           generate_release_notes: true
           body: |
             ## Temp Monitor ${{ github.ref_name }}
