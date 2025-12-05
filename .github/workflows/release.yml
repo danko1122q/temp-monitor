@@ -65,12 +65,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. Download Binary Artifact (Kita butuh x86_64 untuk paket .deb)
+      # 1. Download Binary Artifact (Artifact akan disimpan di folder artifacts/temp-x86_64-linux-gnu/)
       - name: Download x86_64 Binary Artifact
         uses: actions/download-artifact@v4
         with:
           name: temp-x86_64-linux-gnu 
-          path: build_binaries/ 
+          path: artifacts 
 
       - name: Setup Package Build Environment
         run: |
@@ -84,7 +84,8 @@ jobs:
           
           # Pindahkan binary ke lokasi yang diharapkan oleh dpkg-buildpackage
           mkdir -p bin 
-          cp build_binaries/temp-x86_64-linux-gnu/temp-x86_64-linux-gnu bin/temp
+          # JALUR SUDAH DIPERBAIKI: Mengakses binary di dalam folder artifact
+          cp artifacts/temp-x86_64-linux-gnu/temp-x86_64-linux-gnu bin/temp
           
           # Bangun paket .deb
           dpkg-buildpackage -us -uc -b
