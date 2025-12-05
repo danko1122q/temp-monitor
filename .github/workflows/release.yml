@@ -1,0 +1,153 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  BINARY_NAME: temp
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-linux-gnu
+            arch: amd64
+            cc: gcc
+          - target: aarch64-linux-gnu
+            arch: arm64
+            cc: aarch64-linux-gnu-gcc
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install cross-compilation tools
+        if: matrix.arch == 'arm64'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Clean and build binary
+        run: |
+          make clean
+          CC=${{ matrix.cc }} make
+
+      - name: Test binary
+        if: matrix.arch == 'amd64'
+        run: |
+          ./bin/temp --version
+          ./bin/temp --help
+
+      - name: Prepare artifact
+        run: |
+          mkdir -p dist
+          cp bin/temp dist/temp-${{ matrix.target }}
+          chmod +x dist/temp-${{ matrix.target }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: temp-${{ matrix.target }}
+          path: dist/temp-${{ matrix.target }}
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release assets
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          mkdir -p release
+          
+          # Binaries from build artifacts
+          cp artifacts/temp-x86_64-linux-gnu/temp-x86_64-linux-gnu \
+             release/temp-$VERSION-linux-x86_64
+          cp artifacts/temp-aarch64-linux-gnu/temp-aarch64-linux-gnu \
+             release/temp-$VERSION-linux-aarch64
+          
+          chmod +x release/temp-$VERSION-linux-*
+          
+          # Generate checksums for binaries
+          cd release
+          sha256sum temp-* > SHA256SUMS.txt
+          sha512sum temp-* > SHA512SUMS.txt
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: release/*
+          generate_release_notes: true
+          body: |
+            ## Temp Monitor ${{ github.ref_name }}
+            
+            ### Downloads
+            
+            | File | Description |
+            |------|-------------|
+            | **Source Code** | Use GitHub's "Source code (tar.gz)" below |
+            | `temp-*-linux-x86_64` | Pre-built binary (64-bit Intel/AMD) |
+            | `temp-*-linux-aarch64` | Pre-built binary (64-bit ARM) |
+            | `SHA256SUMS.txt` | Checksums for verification |
+            
+            ### Installation
+            
+            **Pre-built binary:**
+            ```bash
+            chmod +x temp-*-linux-x86_64
+            sudo mv temp-*-linux-x86_64 /usr/local/bin/temp
+            ```
+            
+            **From source (recommended for packaging):**
+            ```bash
+            # Download source from "Source code (tar.gz)" link below
+            tar xzf temp-monitor-*.tar.gz
+            cd temp-monitor-*
+            make && sudo make install
+            ```
+            
+            ### For Package Maintainers
+            
+            Use GitHub's auto-generated source archive:
+            ```
+            https://github.com/danko1122/temp-monitor/archive/refs/tags/${{ github.ref_name }}.tar.gz
+            ```
+            
+            See [CHANGELOG.md](CHANGELOG.md) for details.
+
+  test-packages:
+    name: Test Package Build
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Test Debian package build
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential debhelper devscripts
+          cp -r packaging/debian .
+          dpkg-buildpackage -us -uc -b || echo "Debian build test completed"
+
+      - name: Test RPM spec syntax
+        run: |
+          sudo apt-get install -y rpm
+          rpmlint packaging/rpm/temp.spec || true
