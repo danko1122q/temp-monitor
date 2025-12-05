@@ -55,9 +55,60 @@ jobs:
           name: temp-${{ matrix.target }}
           path: dist/temp-${{ matrix.target }}
 
+  # JOB BARU/MODIFIKASI: Membuat dan Mengunggah Paket Debian
+  package-and-test:
+    name: Create Debian Package and Test Specs
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 1. Download Binary Artifact (Kita butuh x86_64 untuk paket .deb)
+      - name: Download x86_64 Binary Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: temp-x86_64-linux-gnu 
+          path: build_binaries/ 
+
+      - name: Setup Package Build Environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential debhelper devscripts rpm
+
+      - name: Create Debian package (.deb)
+        run: |
+          # Siapkan lokasi file packaging
+          cp -r packaging/debian .
+          
+          # Pindahkan binary ke lokasi yang diharapkan oleh dpkg-buildpackage
+          mkdir -p bin 
+          cp build_binaries/temp-x86_64-linux-gnu/temp-x86_64-linux-gnu bin/temp
+          
+          # Bangun paket .deb
+          dpkg-buildpackage -us -uc -b
+          
+          # Pindahkan file .deb yang dihasilkan ke root dan simpan nama file
+          mv ../*.deb .
+          echo "DEB_FILE_NAME=$(ls *.deb)" >> $GITHUB_ENV
+
+      - name: Upload Debian Package Artifact
+        if: success() && env.DEB_FILE_NAME != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: debian-package-artifact
+          path: "*.deb" 
+
+      - name: Test RPM spec syntax
+        run: |
+          rpmlint packaging/rpm/temp.spec || true
+          # NOTE: Tambahkan langkah build RPM di sini jika Anda ingin .rpm diunggah juga.
+
+  # JOB MODIFIKASI: Mengunduh semua aset (Binary + Paket) dan Membuat Rilis
   release:
     name: Create Release
-    needs: build
+    needs: [build, package-and-test] # Tambahkan dependensi paket
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -66,7 +117,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Download all artifacts
+      - name: Download all artifacts (Binaries & Packages)
         uses: actions/download-artifact@v4
         with:
           path: artifacts
@@ -82,17 +133,21 @@ jobs:
           cp artifacts/temp-aarch64-linux-gnu/temp-aarch64-linux-gnu \
              release/temp-$VERSION-linux-aarch64
           
+          # AMBIL PAKET DEBIAN BARU
+          cp artifacts/debian-package-artifact/*.deb release/
+          
           chmod +x release/temp-$VERSION-linux-*
           
-          # Generate checksums for binaries
+          # Generate checksums for binaries and packages
           cd release
-          sha256sum temp-* > SHA256SUMS.txt
-          sha512sum temp-* > SHA512SUMS.txt
-
+          # Checksum sekarang mencakup binary DAN paket .deb
+          sha256sum * > SHA256SUMS.txt
+          sha512sum * > SHA512SUMS.txt
+          
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: release/*
+          files: release/* # Ini mencakup Binary, Checksum, dan Paket .deb
           generate_release_notes: true
           body: |
             ## Temp Monitor ${{ github.ref_name }}
@@ -104,6 +159,7 @@ jobs:
             | **Source Code** | Use GitHub's "Source code (tar.gz)" below |
             | `temp-*-linux-x86_64` | Pre-built binary (64-bit Intel/AMD) |
             | `temp-*-linux-aarch64` | Pre-built binary (64-bit ARM) |
+            | `*.deb` | Debian/Ubuntu package |
             | `SHA256SUMS.txt` | Checksums for verification |
             
             ### Installation
@@ -112,6 +168,11 @@ jobs:
             ```bash
             chmod +x temp-*-linux-x86_64
             sudo mv temp-*-linux-x86_64 /usr/local/bin/temp
+            ```
+            
+            **Install Debian/Ubuntu Package:**
+            ```bash
+            sudo dpkg -i temp-*-linux-x86_64.deb
             ```
             
             **From source (recommended for packaging):**
@@ -126,28 +187,7 @@ jobs:
             
             Use GitHub's auto-generated source archive:
             ```
-            https://github.com/danko1122/temp-monitor/archive/refs/tags/${{ github.ref_name }}.tar.gz
+            [https://github.com/danko1122/temp-monitor/archive/refs/tags/$](https://github.com/danko1122/temp-monitor/archive/refs/tags/$){{ github.ref_name }}.tar.gz
             ```
             
             See [CHANGELOG.md](CHANGELOG.md) for details.
-
-  test-packages:
-    name: Test Package Build
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Test Debian package build
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential debhelper devscripts
-          cp -r packaging/debian .
-          dpkg-buildpackage -us -uc -b || echo "Debian build test completed"
-
-      - name: Test RPM spec syntax
-        run: |
-          sudo apt-get install -y rpm
-          rpmlint packaging/rpm/temp.spec || true
