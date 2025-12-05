@@ -78,7 +78,7 @@ void sigint_handler(int sig) {
 void print_help(const char *prog_name) {
     printf("\n");
     printf(COLOR_BRIGHT_CYAN "==========================================================\n");
-    printf("  " COLOR_RESET COLOR_BOLD COLOR_BRIGHT_WHITE "Temp Monitor" COLOR_RESET " v%s\n", VERSION);
+    printf("  " COLOR_RESET COLOR_BOLD COLOR_BRIGHT_WHITE "Temp Monitor" COLOR_RESET "v%s\n", VERSION);
     printf(COLOR_BRIGHT_CYAN "==========================================================\n" COLOR_RESET);
     printf("  Real-time hardware temperature monitoring for Linux\n");
     printf(COLOR_BRIGHT_CYAN "==========================================================\n" COLOR_RESET);
