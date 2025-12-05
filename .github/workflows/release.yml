@@ -52,10 +52,10 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.target }} # PERBAIKAN: Nama artifact diubah untuk menghindari konflik path
+          name: temp-${{ matrix.target }} # DIKEMBALIKAN KE NAMA ARTIFACT ASLI
           path: dist/temp-${{ matrix.target }}
 
-  # JOB PERBAIKAN: Mengatasi masalah jalur artifact
+  # JOB PERBAIKAN: Menggunakan jalur copy yang paling sederhana
   package-and-test:
     name: Create Debian Package and Test Specs
     needs: build
@@ -65,12 +65,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. Download Binary Artifact (Mengunduh artifact bernama x86_64-linux-gnu)
+      # 1. Download Binary Artifact (Kita akan tahu nama folder artifact)
       - name: Download x86_64 Binary Artifact
         uses: actions/download-artifact@v4
         with:
-          name: x86_64-linux-gnu # NAMA ARTIFACT YANG BARU
-          path: artifacts 
+          name: temp-x86_64-linux-gnu # NAMA ARTIFACT YANG AKAN DIUNDUH
+          path: artifacts # Folder yang menerima unduhan (tempat artifact akan diekstrak)
 
       - name: Setup Package Build Environment
         run: |
@@ -84,8 +84,10 @@ jobs:
           
           # Pindahkan binary ke lokasi yang diharapkan oleh dpkg-buildpackage
           mkdir -p bin 
-          # JALUR FINAL DIPERBAIKI: Nama folder sesuai artifact. Nama file sesuai output 'Prepare artifact'
-          cp artifacts/x86_64-linux-gnu/temp-x86_64-linux-gnu bin/temp
+          
+          # PERBAIKAN KRUSIAL: ASUMSI JALUR ADALAH ARTIFACT-NAME/FILE-NAME
+          # Jika error lagi, kita akan tahu bahwa nama folder artifactnya adalah 'artifacts' itu sendiri.
+          cp artifacts/temp-x86_64-linux-gnu/temp-x86_64-linux-gnu bin/temp 
           
           # Bangun paket .deb
           dpkg-buildpackage -us -uc -b
@@ -108,7 +110,7 @@ jobs:
   # JOB MODIFIKASI: Mengunduh semua aset (Binary + Paket) dan Membuat Rilis
   release:
     name: Create Release
-    needs: [build, package-and-test] # Tambahkan dependensi paket
+    needs: [build, package-and-test] 
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -117,7 +119,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # DOWNLOAD SEMUA ARTIFACT: Termasuk yang namanya baru (x86_64-linux-gnu, aarch64-linux-gnu)
+      # DOWNLOAD SEMUA ARTIFACT
       - name: Download all artifacts (Binaries & Packages)
         uses: actions/download-artifact@v4
         with:
@@ -128,10 +130,10 @@ jobs:
           VERSION=${GITHUB_REF#refs/tags/v}
           mkdir -p release
           
-          # Binaries from build artifacts (JALUR DISESUAIKAN DENGAN NAMA ARTIFACT BARU)
-          cp artifacts/x86_64-linux-gnu/temp-x86_64-linux-gnu \
+          # Binaries from build artifacts (MENGGUNAKAN JALUR LAMA/ASLI)
+          cp artifacts/temp-x86_64-linux-gnu/temp-x86_64-linux-gnu \
              release/temp-$VERSION-linux-x86_64
-          cp artifacts/aarch64-linux-gnu/temp-aarch64-linux-gnu \
+          cp artifacts/temp-aarch64-linux-gnu/temp-aarch64-linux-gnu \
              release/temp-$VERSION-linux-aarch64
           
           # AMBIL PAKET DEBIAN BARU
