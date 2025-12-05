@@ -37,7 +37,7 @@ jobs:
           make clean
           CC=${{ matrix.cc }} make
 
-      - name: Test binary
+      - name: Test binary (amd64 only)
         if: matrix.arch == 'amd64'
         run: |
           ./bin/temp --version
@@ -52,10 +52,9 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: temp-${{ matrix.target }} # Menggunakan nama artifact asli
+          name: temp-${{ matrix.target }}
           path: dist/temp-${{ matrix.target }}
 
-  # JOB PERBAIKAN: Ditambahkan langkah debugging untuk menemukan jalur artifact
   package-and-test:
     name: Create Debian Package and Test Specs
     needs: build
@@ -65,18 +64,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. Download Binary Artifact 
       - name: Download x86_64 Binary Artifact
         uses: actions/download-artifact@v4
         with:
-          name: temp-x86_64-linux-gnu 
-          path: artifacts # Folder tempat unduhan akan diekstrak
+          name: temp-x86_64-linux-gnu
+          path: artifacts
 
-      # LANGKAH DEBUGGING BARU: Mencetak isi folder artifacts untuk melihat jalur file yang sebenarnya
       - name: List Artifact Content (DEBUG)
         run: |
-          echo "Listing contents of downloaded artifacts:"
-          # Menggunakan find untuk melihat struktur folder secara rinci
+          echo "Artifacts:"
           find artifacts/
 
       - name: Setup Package Build Environment
@@ -86,38 +82,30 @@ jobs:
 
       - name: Create Debian package (.deb)
         run: |
-          # Siapkan lokasi file packaging
           cp -r packaging/debian .
-          
-          # Pindahkan binary ke lokasi yang diharapkan oleh dpkg-buildpackage
-          mkdir -p bin 
-          
-          # JALUR SEMENTARA (PERLU DIGANTI NANTI SETELAH DEBUG)
-          # Kita tetap menggunakan jalur prediksi terakhir. Jika gagal, log debugging akan menunjukkan yang benar.
-          cp artifacts/temp-x86_64-linux-gnu/temp-x86_64-linux-gnu bin/temp 
-          
-          # Bangun paket .deb
+          mkdir -p bin
+          cp artifacts/temp-x86_64-linux-gnu/* bin/temp
+          chmod +x bin/temp
+
           dpkg-buildpackage -us -uc -b
-          
-          # Pindahkan file .deb yang dihasilkan ke root dan simpan nama file
+
           mv ../*.deb .
           echo "DEB_FILE_NAME=$(ls *.deb)" >> $GITHUB_ENV
 
       - name: Upload Debian Package Artifact
-        if: success() && env.DEB_FILE_NAME != ''
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: debian-package-artifact
-          path: "*.deb" 
+          path: "*.deb"
 
       - name: Test RPM spec syntax
         run: |
           rpmlint packaging/rpm/temp.spec || true
 
-  # JOB MODIFIKASI: Mengunduh semua aset (Binary + Paket) dan Membuat Rilis
   release:
     name: Create Release
-    needs: [build, package-and-test] 
+    needs: [build, package-and-test]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -126,8 +114,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # DOWNLOAD SEMUA ARTIFACT
-      - name: Download all artifacts (Binaries & Packages)
+      - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
@@ -136,67 +123,20 @@ jobs:
         run: |
           VERSION=${GITHUB_REF#refs/tags/v}
           mkdir -p release
-          
-          # Binaries from build artifacts (MENGGUNAKAN JALUR LAMA/ASLI)
-          cp artifacts/temp-x86_64-linux-gnu/temp-x86_64-linux-gnu \
-             release/temp-$VERSION-linux-x86_64
-          cp artifacts/temp-aarch64-linux-gnu/temp-aarch64-linux-gnu \
-             release/temp-$VERSION-linux-aarch64
-          
-          # AMBIL PAKET DEBIAN BARU
+
+          cp artifacts/temp-x86_64-linux-gnu/* release/temp-$VERSION-linux-x86_64
+          cp artifacts/temp-aarch64-linux-gnu/* release/temp-$VERSION-linux-aarch64
+
           cp artifacts/debian-package-artifact/*.deb release/
-          
+
           chmod +x release/temp-$VERSION-linux-*
-          
-          # Generate checksums for binaries and packages
+
           cd release
           sha256sum * > SHA256SUMS.txt
           sha512sum * > SHA512SUMS.txt
-          
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           files: release/*
           generate_release_notes: true
-          body: |
-            ## Temp Monitor ${{ github.ref_name }}
-            
-            ### Downloads
-            
-            | File | Description |
-            |------|-------------|
-            | **Source Code** | Use GitHub's "Source code (tar.gz)" below |
-            | `temp-*-linux-x86_64` | Pre-built binary (64-bit Intel/AMD) |
-            | `temp-*-linux-aarch64` | Pre-built binary (64-bit ARM) |
-            | `*.deb` | Debian/Ubuntu package |
-            | `SHA256SUMS.txt` | Checksums for verification |
-            
-            ### Installation
-            
-            **Pre-built binary:**
-            ```bash
-            chmod +x temp-*-linux-x86_64
-            sudo mv temp-*-linux-x86_64 /usr/local/bin/temp
-            ```
-            
-            **Install Debian/Ubuntu Package:**
-            ```bash
-            sudo dpkg -i temp-*-linux-x86_64.deb
-            ```
-            
-            **From source (recommended for packaging):**
-            ```bash
-            # Download source from "Source code (tar.gz)" link below
-            tar xzf temp-monitor-*.tar.gz
-            cd temp-monitor-*
-            make && sudo make install
-            ```
-            
-            ### For Package Maintainers
-            
-            Use GitHub's auto-generated source archive:
-            ```
-            [https://github.com/danko1122q/temp-monitor/archive/refs/tags/$](https://github.com/danko1122q/temp-monitor/archive/refs/tags/$){{ github.ref_name }}.tar.gz
-            ```
-            
-            See [CHANGELOG.md](CHANGELOG.md) for details.
