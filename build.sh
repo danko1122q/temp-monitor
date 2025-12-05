@@ -1,239 +1,281 @@
 #!/bin/bash
 
-# Ultimate Hardware Temperature Monitor - Build Script
-# Version 0.0.1
-
 set -e
 
-# Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-# Configuration
 PROJECT_NAME="Ultimate Hardware Temperature Monitor"
 VERSION="0.0.1"
 BUILD_DIR="build"
 BIN_DIR="bin"
 TARGET="tempmonitor"
 
-# Print colored message
 print_msg() {
-    local color=$1
+    local color="$1"
     shift
-    echo -e "${color}$@${NC}"
+    echo -e "${color}$*${NC}"
 }
 
-# Print header
 print_header() {
     echo ""
-    print_msg "$CYAN" "╔══════════════════════════════════════════════════════════════╗"
-    print_msg "$CYAN" "║  $PROJECT_NAME v$VERSION"
-    print_msg "$CYAN" "╚══════════════════════════════════════════════════════════════╝"
+    print_msg "$CYAN" "================================================================"
+    print_msg "$CYAN" "  $PROJECT_NAME v$VERSION"
+    print_msg "$CYAN" "================================================================"
     echo ""
 }
 
-# Check dependencies
 check_dependencies() {
-    print_msg "$YELLOW" "⟳ Checking dependencies..."
+    print_msg "$YELLOW" "[*] Checking dependencies..."
     
     local missing_deps=0
     
     if ! command -v gcc &> /dev/null; then
-        print_msg "$RED" "✗ GCC compiler not found"
+        print_msg "$RED" "[X] GCC compiler not found"
         missing_deps=1
     else
-        print_msg "$GREEN" "✓ GCC compiler found"
+        print_msg "$GREEN" "[+] GCC compiler found"
     fi
     
     if ! command -v make &> /dev/null; then
-        print_msg "$RED" "✗ Make not found"
+        print_msg "$RED" "[X] Make not found"
         missing_deps=1
     else
-        print_msg "$GREEN" "✓ Make found"
+        print_msg "$GREEN" "[+] Make found"
     fi
     
     if [ $missing_deps -eq 1 ]; then
         echo ""
         print_msg "$YELLOW" "Installing missing dependencies..."
-        print_msg "$CYAN" "Run: sudo apt install build-essential"
+        
+        if command -v apt-get &> /dev/null; then
+            print_msg "$CYAN" "Detected: Debian/Ubuntu"
+            print_msg "$CYAN" "Run: sudo apt-get install build-essential"
+        elif command -v dnf &> /dev/null; then
+            print_msg "$CYAN" "Detected: Fedora/RHEL"
+            print_msg "$CYAN" "Run: sudo dnf install gcc make"
+        elif command -v yum &> /dev/null; then
+            print_msg "$CYAN" "Detected: CentOS/RHEL"
+            print_msg "$CYAN" "Run: sudo yum install gcc make"
+        elif command -v pacman &> /dev/null; then
+            print_msg "$CYAN" "Detected: Arch Linux"
+            print_msg "$CYAN" "Run: sudo pacman -S base-devel"
+        elif command -v zypper &> /dev/null; then
+            print_msg "$CYAN" "Detected: openSUSE"
+            print_msg "$CYAN" "Run: sudo zypper install gcc make"
+        elif command -v apk &> /dev/null; then
+            print_msg "$CYAN" "Detected: Alpine Linux"
+            print_msg "$CYAN" "Run: sudo apk add build-base"
+        elif command -v emerge &> /dev/null; then
+            print_msg "$CYAN" "Detected: Gentoo"
+            print_msg "$CYAN" "Run: sudo emerge sys-devel/gcc sys-devel/make"
+        elif command -v nix-env &> /dev/null; then
+            print_msg "$CYAN" "Detected: NixOS"
+            print_msg "$CYAN" "Run: nix-env -iA nixpkgs.gcc nixpkgs.gnumake"
+        else
+            print_msg "$RED" "Unknown distribution. Please install gcc and make manually."
+        fi
         exit 1
     fi
     
     echo ""
 }
 
-# Clean build
 clean_build() {
-    print_msg "$YELLOW" "⟳ Cleaning build files..."
-    make clean &>/dev/null || true
-    print_msg "$GREEN" "✓ Clean completed"
+    print_msg "$YELLOW" "[*] Cleaning build files..."
+    make clean &>/dev/null || rm -rf "$BUILD_DIR" "$BIN_DIR" 2>/dev/null || true
+    print_msg "$GREEN" "[+] Clean completed"
     echo ""
 }
 
-# Build project
 build_project() {
-    print_msg "$YELLOW" "⟳ Building $PROJECT_NAME..."
+    print_msg "$YELLOW" "[*] Building $PROJECT_NAME..."
     echo ""
     
     if make; then
         echo ""
-        print_msg "$GREEN" "✓✓✓ Build successful! ✓✓✓"
+        print_msg "$GREEN" "[+] Build successful!"
         echo ""
         print_msg "$CYAN" "Executable: ./$BIN_DIR/$TARGET"
         print_msg "$YELLOW" "Run with: ./$BIN_DIR/$TARGET"
     else
         echo ""
-        print_msg "$RED" "✗✗✗ Build failed! ✗✗✗"
+        print_msg "$RED" "[X] Build failed!"
         exit 1
     fi
 }
 
-# Build debug version
 build_debug() {
-    print_msg "$YELLOW" "⟳ Building debug version..."
+    print_msg "$YELLOW" "[*] Building debug version..."
     echo ""
     
     if make debug; then
         echo ""
-        print_msg "$GREEN" "✓ Debug build successful!"
+        print_msg "$GREEN" "[+] Debug build successful!"
         print_msg "$CYAN" "Debug executable: ./$BIN_DIR/$TARGET-debug"
         print_msg "$YELLOW" "Run with: gdb ./$BIN_DIR/$TARGET-debug"
     else
-        print_msg "$RED" "✗ Debug build failed!"
+        print_msg "$RED" "[X] Debug build failed!"
         exit 1
     fi
 }
 
-# Check for sensor modules
 check_sensors() {
-    print_msg "$YELLOW" "⟳ Checking for sensor modules..."
+    print_msg "$YELLOW" "[*] Checking for sensor modules..."
     echo ""
     
-    # Check loaded modules
-    if lsmod | grep -qE "coretemp|k10temp|zenpower"; then
-        print_msg "$GREEN" "✓ Temperature sensor modules loaded:"
-        lsmod | grep -E "coretemp|k10temp|zenpower" | awk '{print "  - " $1}'
+    if command -v lsmod &> /dev/null; then
+        if lsmod | grep -qE "coretemp|k10temp|zenpower"; then
+            print_msg "$GREEN" "[+] Temperature sensor modules loaded:"
+            lsmod | grep -E "coretemp|k10temp|zenpower" | awk '{print "  - " $1}'
+        else
+            print_msg "$YELLOW" "[!] No temperature sensor modules loaded"
+            print_msg "$CYAN" "Tip: Run './build.sh --load-modules' to load them"
+        fi
     else
-        print_msg "$YELLOW" "⚠ No temperature sensor modules loaded"
-        print_msg "$CYAN" "Tip: Run './build.sh --load-modules' to load them"
+        print_msg "$YELLOW" "[!] lsmod not available"
     fi
     
     echo ""
     
-    # Check hwmon
     if [ -d "/sys/class/hwmon" ]; then
-        local hwmon_count=$(ls -1 /sys/class/hwmon | grep hwmon | wc -l)
-        print_msg "$GREEN" "✓ Found $hwmon_count hwmon device(s)"
+        local hwmon_count
+        hwmon_count=$(find /sys/class/hwmon -maxdepth 1 -name "hwmon*" 2>/dev/null | wc -l)
+        print_msg "$GREEN" "[+] Found $hwmon_count hwmon device(s)"
         
-        if [ $hwmon_count -eq 0 ]; then
-            print_msg "$RED" "⚠ No hwmon devices detected!"
+        if [ "$hwmon_count" -eq 0 ]; then
+            print_msg "$RED" "[!] No hwmon devices detected!"
             print_msg "$YELLOW" "Run './build.sh --setup' to configure sensors"
         fi
     else
-        print_msg "$RED" "✗ /sys/class/hwmon not accessible"
+        print_msg "$RED" "[X] /sys/class/hwmon not accessible"
     fi
     
     echo ""
 }
 
-# Setup sensors
 setup_sensors() {
-    print_msg "$YELLOW" "⟳ Setting up lm-sensors..."
+    print_msg "$YELLOW" "[*] Setting up lm-sensors..."
     echo ""
     
-    if ! command -v sensors &> /dev/null; then
-        print_msg "$CYAN" "Installing lm-sensors..."
-        sudo apt update
-        sudo apt install -y lm-sensors
+    if command -v apt-get &> /dev/null; then
+        print_msg "$CYAN" "Installing lm-sensors (Debian/Ubuntu)..."
+        sudo apt-get update && sudo apt-get install -y lm-sensors
+    elif command -v dnf &> /dev/null; then
+        print_msg "$CYAN" "Installing lm_sensors (Fedora/RHEL)..."
+        sudo dnf install -y lm_sensors
+    elif command -v yum &> /dev/null; then
+        print_msg "$CYAN" "Installing lm_sensors (CentOS/RHEL)..."
+        sudo yum install -y lm_sensors
+    elif command -v pacman &> /dev/null; then
+        print_msg "$CYAN" "Installing lm_sensors (Arch Linux)..."
+        sudo pacman -S --noconfirm lm_sensors
+    elif command -v zypper &> /dev/null; then
+        print_msg "$CYAN" "Installing sensors (openSUSE)..."
+        sudo zypper install -y sensors
+    elif command -v apk &> /dev/null; then
+        print_msg "$CYAN" "Installing lm-sensors (Alpine Linux)..."
+        sudo apk add lm-sensors
+    else
+        print_msg "$RED" "Unknown distribution. Please install lm-sensors manually."
+        return 1
     fi
     
-    print_msg "$CYAN" "Running sensors-detect..."
-    sudo sensors-detect --auto
+    if command -v sensors-detect &> /dev/null; then
+        print_msg "$CYAN" "Running sensors-detect..."
+        sudo sensors-detect --auto || true
+    fi
     
-    print_msg "$CYAN" "Restarting kmod service..."
-    sudo systemctl restart kmod || true
+    if command -v systemctl &> /dev/null; then
+        print_msg "$CYAN" "Restarting kmod service..."
+        sudo systemctl restart kmod 2>/dev/null || true
+    fi
     
     echo ""
-    print_msg "$GREEN" "✓ Sensor setup completed!"
+    print_msg "$GREEN" "[+] Sensor setup completed!"
     print_msg "$YELLOW" "Try running: sensors"
     echo ""
 }
 
-# Load modules
 load_modules() {
-    print_msg "$YELLOW" "⟳ Loading temperature sensor modules..."
+    print_msg "$YELLOW" "[*] Loading temperature sensor modules..."
     echo ""
     
-    # Intel
     if sudo modprobe coretemp 2>/dev/null; then
-        print_msg "$GREEN" "✓ Loaded coretemp (Intel)"
+        print_msg "$GREEN" "[+] Loaded coretemp (Intel)"
     else
-        print_msg "$YELLOW" "⚠ coretemp not available"
+        print_msg "$YELLOW" "[!] coretemp not available"
     fi
     
-    # AMD
     if sudo modprobe k10temp 2>/dev/null; then
-        print_msg "$GREEN" "✓ Loaded k10temp (AMD)"
+        print_msg "$GREEN" "[+] Loaded k10temp (AMD)"
     else
-        print_msg "$YELLOW" "⚠ k10temp not available"
+        print_msg "$YELLOW" "[!] k10temp not available"
     fi
     
-    # AMD Ryzen
     if sudo modprobe zenpower 2>/dev/null; then
-        print_msg "$GREEN" "✓ Loaded zenpower (AMD Ryzen)"
+        print_msg "$GREEN" "[+] Loaded zenpower (AMD Ryzen)"
     else
-        print_msg "$YELLOW" "⚠ zenpower not available"
+        print_msg "$YELLOW" "[!] zenpower not available"
+    fi
+    
+    if sudo modprobe nct6775 2>/dev/null; then
+        print_msg "$GREEN" "[+] Loaded nct6775 (Nuvoton SuperIO)"
+    else
+        print_msg "$YELLOW" "[!] nct6775 not available"
+    fi
+    
+    if sudo modprobe it87 2>/dev/null; then
+        print_msg "$GREEN" "[+] Loaded it87 (ITE SuperIO)"
+    else
+        print_msg "$YELLOW" "[!] it87 not available"
     fi
     
     echo ""
 }
 
-# Install system-wide
 install_system() {
     if [ ! -f "$BIN_DIR/$TARGET" ]; then
-        print_msg "$RED" "✗ Binary not found. Build first!"
+        print_msg "$RED" "[X] Binary not found. Build first!"
         exit 1
     fi
     
-    print_msg "$YELLOW" "⟳ Installing to /usr/local/bin..."
+    print_msg "$YELLOW" "[*] Installing to /usr/local/bin..."
     
     sudo cp "$BIN_DIR/$TARGET" /usr/local/bin/
     sudo chmod +x "/usr/local/bin/$TARGET"
     
-    print_msg "$GREEN" "✓ Installation completed!"
+    print_msg "$GREEN" "[+] Installation completed!"
     print_msg "$CYAN" "You can now run: $TARGET"
     echo ""
 }
 
-# Uninstall
 uninstall_system() {
-    print_msg "$YELLOW" "⟳ Uninstalling from /usr/local/bin..."
+    print_msg "$YELLOW" "[*] Uninstalling from /usr/local/bin..."
     
     sudo rm -f "/usr/local/bin/$TARGET"
     
-    print_msg "$GREEN" "✓ Uninstallation completed!"
+    print_msg "$GREEN" "[+] Uninstallation completed!"
     echo ""
 }
 
-# Run program
 run_program() {
     if [ ! -f "$BIN_DIR/$TARGET" ]; then
-        print_msg "$RED" "✗ Binary not found. Building first..."
+        print_msg "$RED" "[X] Binary not found. Building first..."
         build_project
     fi
     
-    print_msg "$CYAN" "⟳ Running $PROJECT_NAME..."
+    print_msg "$CYAN" "[*] Running $PROJECT_NAME..."
     echo ""
     sleep 1
     
     "./$BIN_DIR/$TARGET" "$@"
 }
 
-# Show help
 show_help() {
     print_header
     
@@ -254,6 +296,15 @@ show_help() {
     echo "  --setup             Setup lm-sensors"
     echo "  --load-modules      Load sensor kernel modules"
     echo ""
+    echo "Supported distributions:"
+    echo "  - Debian, Ubuntu, Linux Mint"
+    echo "  - Fedora, RHEL, CentOS, Rocky Linux"
+    echo "  - Arch Linux, Manjaro"
+    echo "  - openSUSE"
+    echo "  - Alpine Linux"
+    echo "  - Gentoo"
+    echo "  - NixOS"
+    echo ""
     echo "Examples:"
     echo "  $0                  # Build the project"
     echo "  $0 --rebuild        # Clean and rebuild"
@@ -262,7 +313,6 @@ show_help() {
     echo ""
 }
 
-# Main script
 main() {
     case "${1:-}" in
         --help|-h)
@@ -325,5 +375,4 @@ main() {
     esac
 }
 
-# Run main
 main "$@"

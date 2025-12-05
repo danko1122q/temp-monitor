@@ -1,0 +1,7 @@
+modules = ["c-clang14", "bash"]
+[agent]
+expertMode = true
+
+[nix]
+channel = "stable-25_05"
+packages = ["gcc", "gnumake"]
