@@ -1,15 +1,29 @@
+/**
+ * @file utils.h
+ * @brief Temp Monitor - Utility functions and definitions
+ * 
+ * Header file containing utility function prototypes,
+ * ANSI color codes, and Unicode symbols for the application.
+ * 
+ * @version 0.0.2
+ * @date 2024-12-05
+ * 
+ * MIT License
+ * Copyright (c) 2024 Danko
+ */
+
 #ifndef UTILS_H
 #define UTILS_H
 
 #include <stddef.h>
 
-// File operations
+/* File operations */
 int read_file(const char *path, char *buffer, size_t size);
 int write_file(const char *path, const char *data);
 int file_exists(const char *path);
 int dir_exists(const char *path);
 
-// String utilities
+/* String utilities */
 void str_tolower(char *str);
 void str_toupper(char *str);
 void str_trim(char *str);
@@ -18,24 +32,24 @@ int str_endswith(const char *str, const char *suffix);
 int str_contains(const char *str, const char *substr);
 void str_replace(char *str, const char *find, const char *replace);
 
-// Path utilities
+/* Path utilities */
 void path_join(char *dest, size_t size, const char *path1, const char *path2);
 void path_basename(const char *path, char *basename, size_t size);
 void path_dirname(const char *path, char *dirname, size_t size);
 
-// Number utilities
+/* Number utilities */
 int parse_int(const char *str, int default_val);
 double parse_double(const char *str, double default_val);
 void format_number(double value, char *buffer, size_t size, int decimals);
 void format_bytes(long bytes, char *buffer, size_t size);
 
-// System utilities
+/* System utilities */
 int is_root(void);
 long get_system_uptime(void);
 int get_cpu_count(void);
 long get_total_memory(void);
 
-// Color definitions
+/* ANSI color escape codes */
 #define COLOR_RESET     "\033[0m"
 #define COLOR_BOLD      "\033[1m"
 #define COLOR_DIM       "\033[2m"
@@ -69,7 +83,7 @@ long get_total_memory(void);
 #define BG_CYAN      "\033[46m"
 #define BG_WHITE     "\033[47m"
 
-// Unicode symbols
+/* Unicode symbols for display */
 #define SYMBOL_DEGREES  "°"
 #define SYMBOL_UP       "↑"
 #define SYMBOL_DOWN     "↓"

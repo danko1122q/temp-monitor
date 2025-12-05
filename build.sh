@@ -9,8 +9,8 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
-PROJECT_NAME="Ultimate Hardware Temperature Monitor"
-VERSION="0.0.1"
+PROJECT_NAME="Temp Monitor"
+VERSION="0.0.2"
 BUILD_DIR="build"
 BIN_DIR="bin"
 TARGET="temp"

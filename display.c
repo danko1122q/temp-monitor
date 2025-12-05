@@ -1,3 +1,28 @@
+/**
+ * @file display.c
+ * @brief Display and UI rendering functions
+ * 
+ * This file contains all functions related to terminal display,
+ * including screen management, temperature bars, sensor output,
+ * and the alternate screen buffer implementation for clean display.
+ * 
+ * @version 0.0.2
+ * @date 2024-12-05
+ * 
+ * MIT License
+ * Copyright (c) 2024 Danko
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ */
+
 #include "display.h"
 #include "utils.h"
 #include <stdio.h>
@@ -7,11 +32,57 @@
 #include <unistd.h>
 #include <time.h>
 
+/**
+ * @brief Clears the terminal screen
+ * 
+ * Uses ANSI escape codes to:
+ * - \033[H    : Move cursor to home position (top-left)
+ * - \033[2J   : Clear entire screen
+ * - \033[3J   : Clear scroll buffer (prevents ghost artifacts)
+ */
 void clear_screen(void) {
-    printf("\033[2J\033[H");
+    printf("\033[H\033[2J\033[3J");
     fflush(stdout);
 }
 
+/**
+ * @brief Enters the alternate screen buffer
+ * 
+ * Switches terminal to alternate screen buffer (like vim/htop).
+ * This prevents any output from appearing in the terminal's
+ * scroll history, keeping the terminal clean after exit.
+ * 
+ * Uses escape code \033[?1049h to save cursor and switch buffer.
+ */
+void enter_alternate_screen(void) {
+    printf("\033[?1049h");
+    printf("\033[H\033[2J\033[3J");
+    fflush(stdout);
+}
+
+/**
+ * @brief Exits the alternate screen buffer
+ * 
+ * Switches back to the main terminal screen buffer.
+ * Restores the previous terminal content that was visible
+ * before entering alternate screen.
+ * 
+ * Uses escape code \033[?1049l to restore cursor and switch back.
+ */
+void exit_alternate_screen(void) {
+    printf("\033[?1049l");
+    fflush(stdout);
+}
+
+/**
+ * @brief Gets the current terminal dimensions
+ * 
+ * Uses ioctl to query terminal size. Falls back to 24x80
+ * if the query fails (e.g., when output is piped).
+ * 
+ * @param rows Pointer to store number of rows
+ * @param cols Pointer to store number of columns
+ */
 void get_terminal_size(int *rows, int *cols) {
     struct winsize w;
     if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == -1) {
@@ -23,20 +94,47 @@ void get_terminal_size(int *rows, int *cols) {
     }
 }
 
+/**
+ * @brief Hides the terminal cursor
+ * 
+ * Uses ANSI escape code to make cursor invisible.
+ * Should be called when entering monitoring mode.
+ */
 void hide_cursor(void) {
     printf("\033[?25l");
     fflush(stdout);
 }
 
+/**
+ * @brief Shows the terminal cursor
+ * 
+ * Restores cursor visibility. Must be called before
+ * program exit to restore normal terminal behavior.
+ */
 void show_cursor(void) {
     printf("\033[?25h");
     fflush(stdout);
 }
 
+/**
+ * @brief Converts Celsius to Fahrenheit
+ * 
+ * @param celsius Temperature in Celsius
+ * @return Temperature in Fahrenheit
+ */
 double celsius_to_fahrenheit(double celsius) {
     return (celsius * 9.0 / 5.0) + 32.0;
 }
 
+/**
+ * @brief Prints a formatted temperature value
+ * 
+ * Displays temperature with appropriate unit (C or F).
+ * Shows "N/A" for invalid readings (< -500).
+ * 
+ * @param temp Temperature value in Celsius
+ * @param use_celsius 1 for Celsius, 0 for Fahrenheit
+ */
 void print_temperature(double temp, int use_celsius) {
     if (temp < -500) {
         printf("  N/A   ");
@@ -50,12 +148,26 @@ void print_temperature(double temp, int use_celsius) {
     }
 }
 
+/**
+ * @brief Gets the current date and time as formatted string
+ * 
+ * Format: YYYY-MM-DD HH:MM:SS
+ * 
+ * @param buffer Output buffer for the time string
+ * @param size Size of the output buffer
+ */
 void get_current_time(char *buffer, size_t size) {
     time_t now = time(NULL);
     struct tm *tm_info = localtime(&now);
     strftime(buffer, size, "%Y-%m-%d %H:%M:%S", tm_info);
 }
 
+/**
+ * @brief Prints a horizontal separator line
+ * 
+ * @param width Number of characters to print
+ * @param style Style variant (1=equals, 2=dash, 3=hash)
+ */
 void print_separator(int width, int style) {
     const char *chars;
     switch (style) {
@@ -70,6 +182,14 @@ void print_separator(int width, int style) {
     }
 }
 
+/**
+ * @brief Prints the application header
+ * 
+ * Displays the title bar with version number and current time.
+ * Adapts width based on terminal size.
+ * 
+ * @param version Version string to display
+ */
 void print_header(const char *version) {
     int rows, cols;
     get_terminal_size(&rows, &cols);
@@ -83,12 +203,12 @@ void print_header(const char *version) {
     printf("+\n" COLOR_RESET);
     
     printf(COLOR_BRIGHT_CYAN "|" COLOR_RESET);
-    int title_len = 40 + (int)strlen(version);
+    int title_len = 16 + (int)strlen(version);
     int padding = (width - title_len - 2) / 2;
     
     for (int i = 0; i < padding; i++) printf(" ");
-    printf(COLOR_BOLD COLOR_BRIGHT_YELLOW "ULTIMATE HARDWARE TEMPERATURE MONITOR");
-    printf(COLOR_BRIGHT_WHITE " v%s" COLOR_RESET, version);
+    printf(COLOR_BOLD COLOR_BRIGHT_WHITE "Temp Monitor");
+    printf(COLOR_BRIGHT_BLACK " v%s" COLOR_RESET, version);
     for (int i = 0; i < padding; i++) printf(" ");
     if ((width - title_len - 2) % 2) printf(" ");
     printf(COLOR_BRIGHT_CYAN "|\n" COLOR_RESET);
@@ -109,6 +229,14 @@ void print_header(const char *version) {
     printf("\n");
 }
 
+/**
+ * @brief Prints the footer with legend and controls
+ * 
+ * Shows temperature color ranges, keyboard controls,
+ * and current refresh rate setting.
+ * 
+ * @param config Display configuration
+ */
 void print_footer(DisplayConfig *config) {
     int rows, cols;
     get_terminal_size(&rows, &cols);
@@ -137,6 +265,20 @@ void print_footer(DisplayConfig *config) {
     printf("Refresh: " COLOR_CYAN "%ds\n" COLOR_RESET, config->refresh_rate);
 }
 
+/**
+ * @brief Prints a color-coded temperature progress bar
+ * 
+ * Displays a visual bar representing temperature level.
+ * Color changes based on temperature thresholds:
+ * - Cyan: < 40C (Cool)
+ * - Green: 40-60C (Normal)
+ * - Yellow: 60-80C (Warm)
+ * - Red: > 80C (Hot/Critical)
+ * 
+ * @param temp Current temperature in Celsius
+ * @param width Width of the bar in characters
+ * @param use_gradient Whether to use gradient colors (unused)
+ */
 void print_temp_bar(double temp, int width, int use_gradient) {
     (void)use_gradient;
     
@@ -187,6 +329,15 @@ void print_temp_bar(double temp, int width, int use_gradient) {
     printf("]" COLOR_RESET);
 }
 
+/**
+ * @brief Prints fan speed information
+ * 
+ * Displays RPM and percentage with color coding.
+ * Color indicates fan activity level.
+ * 
+ * @param rpm Fan speed in RPM
+ * @param percent Fan speed as percentage of maximum
+ */
 void print_fan_speed(int rpm, int percent) {
     if (rpm < 0) {
         printf(COLOR_BRIGHT_BLACK "  N/A  " COLOR_RESET);

@@ -1,19 +1,30 @@
+# Contributor: Danko <davaniko1122@gmail.com>
+# Maintainer: Danko <davaniko1122@gmail.com>
+# Temp Monitor - Real-time hardware temperature monitoring for Linux
+
 pkgname=temp
-pkgver=0.0.1
+pkgver=0.0.2
 pkgrel=0
-pkgdesc="Hardware temperature monitor for Linux"
+pkgdesc="Real-time hardware temperature monitor for Linux"
 url="https://github.com/danko1122/temp-monitor"
 arch="x86_64 aarch64 x86"
 license="MIT"
 makedepends="gcc make musl-dev"
-source="$pkgname-$pkgver.tar.gz"
+source="$pkgname-$pkgver.tar.gz::https://github.com/danko1122/temp-monitor/archive/refs/tags/v$pkgver.tar.gz"
+builddir="$srcdir/temp-monitor-$pkgver"
 
 build() {
     make
 }
 
+check() {
+    ./bin/temp --version
+}
+
 package() {
     install -Dm755 bin/temp "$pkgdir"/usr/bin/temp
+    install -Dm644 LICENSE "$pkgdir"/usr/share/licenses/$pkgname/LICENSE
+    install -Dm644 README.md "$pkgdir"/usr/share/doc/$pkgname/README.md
 }
 
 sha512sums="SKIP"

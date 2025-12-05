@@ -1,3 +1,17 @@
+/**
+ * @file main.h
+ * @brief Temp Monitor - Header file for main module
+ * 
+ * Contains global definitions, configuration structures,
+ * and function prototypes for the main application.
+ * 
+ * @version 0.0.2
+ * @date 2024-12-05
+ * 
+ * MIT License
+ * Copyright (c) 2024 Danko
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,7 +21,8 @@
 #include "display.h"
 #include "utils.h"
 
-#define VERSION "0.0.1"
+/* Application version */
+#define VERSION "0.0.2"
 
 // Global variables
 volatile sig_atomic_t keep_running = 1;
@@ -32,13 +47,11 @@ void sigint_handler(int sig) {
 // Print help message
 void print_help(const char *prog_name) {
     printf("\n");
-    printf(COLOR_BRIGHT_CYAN "╔══════════════════════════════════════════════════════════════════════╗\n");
-    printf("║" COLOR_RESET " " COLOR_BOLD COLOR_YELLOW "ULTIMATE HARDWARE TEMPERATURE MONITOR v%s" COLOR_RESET, VERSION);
-    printf("                      " COLOR_BRIGHT_CYAN "║\n");
-    printf("╠══════════════════════════════════════════════════════════════════════╣\n" COLOR_RESET);
-    printf(COLOR_BRIGHT_CYAN "║" COLOR_RESET " A powerful real-time hardware temperature monitoring tool          " COLOR_BRIGHT_CYAN "║\n");
-    printf("║" COLOR_RESET " Supports CPU, GPU, NVMe, Chipset, and more!                        " COLOR_BRIGHT_CYAN "║\n");
-    printf("╚══════════════════════════════════════════════════════════════════════╝\n" COLOR_RESET);
+    printf(COLOR_BRIGHT_CYAN "==========================================================\n");
+    printf("  " COLOR_RESET COLOR_BOLD COLOR_BRIGHT_WHITE "Temp Monitor" COLOR_RESET " v%s\n", VERSION);
+    printf(COLOR_BRIGHT_CYAN "==========================================================\n" COLOR_RESET);
+    printf("  Real-time hardware temperature monitoring for Linux\n");
+    printf(COLOR_BRIGHT_CYAN "==========================================================\n" COLOR_RESET);
     
     printf("\n" COLOR_BOLD COLOR_GREEN "USAGE:\n" COLOR_RESET);
     printf("  %s [OPTIONS] [REFRESH_RATE]\n\n", prog_name);
@@ -93,10 +106,10 @@ void print_help(const char *prog_name) {
 // Print version
 void print_version(void) {
     printf("\n");
-    printf(COLOR_BOLD COLOR_BRIGHT_YELLOW "Ultimate Hardware Temperature Monitor\n" COLOR_RESET);
-    printf(COLOR_BRIGHT_CYAN "Version: " COLOR_RESET COLOR_GREEN "%s\n" COLOR_RESET, VERSION);
-    printf(COLOR_BRIGHT_CYAN "Author:  " COLOR_RESET "Advanced Monitoring Team\n");
-    printf(COLOR_BRIGHT_CYAN "License: " COLOR_RESET "MIT License\n");
+    printf(COLOR_BOLD COLOR_BRIGHT_WHITE "Temp Monitor\n" COLOR_RESET);
+    printf(COLOR_BRIGHT_BLACK "Version: " COLOR_RESET "%s\n", VERSION);
+    printf(COLOR_BRIGHT_BLACK "Author:  " COLOR_RESET "Danko\n");
+    printf(COLOR_BRIGHT_BLACK "License: " COLOR_RESET "MIT\n");
     printf("\n");
 }
 
@@ -247,8 +260,8 @@ int main(int argc, char *argv[]) {
     clear_screen();
     show_cursor();
     printf("\n");
-    printf(COLOR_BRIGHT_YELLOW "👋 Temperature monitoring stopped.\n" COLOR_RESET);
-    printf(COLOR_GREEN "Thank you for using Ultimate Hardware Temperature Monitor!\n" COLOR_RESET);
+    printf(COLOR_BRIGHT_WHITE "Monitoring stopped.\n" COLOR_RESET);
+    printf(COLOR_BRIGHT_BLACK "Temp Monitor v%s\n" COLOR_RESET, VERSION);
     printf("\n");
     
     return 0;

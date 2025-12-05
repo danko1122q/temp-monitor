@@ -1,3 +1,18 @@
+/**
+ * @file sensor.c
+ * @brief Temp Monitor - Sensor detection and reading implementation
+ * 
+ * This file implements sensor detection by scanning the Linux
+ * hwmon and thermal subsystems. It handles reading temperature
+ * values, detecting sensor types, and managing fan data.
+ * 
+ * @version 0.0.2
+ * @date 2024-12-05
+ * 
+ * MIT License
+ * Copyright (c) 2024 Danko
+ */
+
 #include "sensor.h"
 #include "utils.h"
 #include <stdio.h>
@@ -6,8 +21,19 @@
 #include <dirent.h>
 #include <unistd.h>
 
+/* Maximum safe path length for buffer operations */
 #define SAFE_PATH_LEN 256
 
+/**
+ * @brief Gets the sensor chip name from hwmon path
+ * 
+ * Reads the 'name' file in the hwmon directory to get
+ * the driver/chip name (e.g., coretemp, k10temp, nvme).
+ * 
+ * @param hwmon_path Path to hwmon directory
+ * @param name Output buffer for sensor name
+ * @param size Size of output buffer
+ */
 static void get_sensor_name(const char *hwmon_path, char *name, size_t size) {
     char path[MAX_PATH];
     size_t hwmon_len = strlen(hwmon_path);
@@ -29,6 +55,17 @@ static void get_sensor_name(const char *hwmon_path, char *name, size_t size) {
     str_trim(name);
 }
 
+/**
+ * @brief Gets the human-readable label for a temperature sensor
+ * 
+ * Reads the tempX_label file if available, otherwise generates
+ * a generic label based on the sensor number.
+ * 
+ * @param base_path Path to hwmon directory
+ * @param temp_file Temperature input filename (e.g., temp1_input)
+ * @param label Output buffer for label
+ * @param size Size of output buffer
+ */
 static void get_sensor_label(const char *base_path, const char *temp_file, char *label, size_t size) {
     char path[MAX_PATH];
     char temp_num[16];
@@ -54,6 +91,16 @@ static void get_sensor_label(const char *base_path, const char *temp_file, char 
     str_trim(label);
 }
 
+/**
+ * @brief Gets the critical temperature threshold for a sensor
+ * 
+ * Reads tempX_crit or tempX_max to determine the critical
+ * temperature threshold. Defaults to 90C if not available.
+ * 
+ * @param base_path Path to hwmon directory
+ * @param temp_file Temperature input filename
+ * @return Critical temperature in Celsius
+ */
 static double get_critical_temp(const char *base_path, const char *temp_file) {
     char path[MAX_PATH];
     char temp_num[16];
@@ -86,6 +133,17 @@ static double get_critical_temp(const char *base_path, const char *temp_file) {
     return crit_temp;
 }
 
+/**
+ * @brief Detects the type of sensor based on name and label
+ * 
+ * Uses pattern matching on the sensor name and label to
+ * categorize the sensor (CPU, GPU, NVMe, etc.).
+ * 
+ * @param name Sensor chip name
+ * @param label Sensor label
+ * @param path Sensor sysfs path (unused currently)
+ * @return SensorType enumeration value
+ */
 SensorType detect_sensor_type(const char *name, const char *label, const char *path) {
     char name_lower[MAX_NAME_LEN];
     char label_lower[MAX_NAME_LEN];
@@ -170,6 +228,15 @@ SensorType detect_sensor_type(const char *name, const char *label, const char *p
     return SENSOR_OTHER;
 }
 
+/**
+ * @brief Reads temperature value from sysfs file
+ * 
+ * Reads the raw millidegree value and converts to Celsius.
+ * Returns -999.0 on read failure.
+ * 
+ * @param path Full path to temperature input file
+ * @return Temperature in Celsius, or -999.0 on error
+ */
 double read_temperature(const char *path) {
     char buffer[32];
     if (!read_file(path, buffer, sizeof(buffer))) {
@@ -184,6 +251,12 @@ double read_temperature(const char *path) {
     return (double)temp_milli / 1000.0;
 }
 
+/**
+ * @brief Reads fan speed from sysfs file
+ * 
+ * @param path Full path to fan input file
+ * @return Fan speed in RPM, or -1 on error
+ */
 int read_fan_speed(const char *path) {
     char buffer[32];
     if (!read_file(path, buffer, sizeof(buffer))) {
@@ -193,6 +266,16 @@ int read_fan_speed(const char *path) {
     return parse_int(buffer, -1);
 }
 
+/**
+ * @brief Gets the maximum RPM value for a fan
+ * 
+ * Reads fanX_max or pwmX_max to determine the maximum
+ * fan speed for percentage calculations.
+ * 
+ * @param hwmon_path Path to hwmon directory
+ * @param fan_num Fan number string
+ * @return Maximum RPM value
+ */
 int read_fan_max(const char *hwmon_path, const char *fan_num) {
     char path[MAX_PATH];
     char buffer[32];
@@ -215,6 +298,13 @@ int read_fan_max(const char *hwmon_path, const char *fan_num) {
     return 5000;
 }
 
+/**
+ * @brief Determines sensor status based on temperature
+ * 
+ * @param temp Current temperature in Celsius
+ * @param critical Critical temperature threshold
+ * @return SensorStatus enumeration value
+ */
 SensorStatus get_sensor_status(double temp, double critical) {
     if (temp < 0) return STATUS_ERROR;
     if (temp >= critical) return STATUS_CRITICAL;
@@ -222,6 +312,14 @@ SensorStatus get_sensor_status(double temp, double critical) {
     return STATUS_OK;
 }
 
+/**
+ * @brief Updates a sensor's current temperature and statistics
+ * 
+ * Reads the current temperature and updates min/max/average
+ * statistics. Also updates associated fan data if present.
+ * 
+ * @param sensor Pointer to sensor structure to update
+ */
 void update_sensor_data(TempSensor *sensor) {
     double temp = read_temperature(sensor->path);
     
@@ -251,6 +349,13 @@ void update_sensor_data(TempSensor *sensor) {
     }
 }
 
+/**
+ * @brief Updates fan speed data for a sensor
+ * 
+ * Reads current fan RPM and calculates percentage.
+ * 
+ * @param sensor Pointer to sensor with fan data
+ */
 void update_fan_data(TempSensor *sensor) {
     if (!sensor->has_fan || sensor->fan_path[0] == '\0') {
         return;
@@ -465,6 +570,15 @@ int scan_thermal_sensors(TempSensor *sensors, int *count) {
     return found;
 }
 
+/**
+ * @brief Main function to scan all temperature sensors
+ * 
+ * Scans hwmon subsystem first, falls back to thermal zones
+ * if no hwmon sensors found. Also scans for associated fans.
+ * 
+ * @param sensors Array to populate with found sensors
+ * @return Number of sensors found
+ */
 int scan_temperature_sensors(TempSensor *sensors) {
     int count = 0;
     
@@ -481,6 +595,16 @@ int scan_temperature_sensors(TempSensor *sensors) {
     return count;
 }
 
+/**
+ * @brief Calculates system-wide statistics from all sensors
+ * 
+ * Aggregates temperatures by sensor type and counts
+ * warnings/critical alerts.
+ * 
+ * @param sensors Array of sensors
+ * @param count Number of sensors
+ * @param stats Output structure for statistics
+ */
 void calculate_system_stats(TempSensor *sensors, int count, SystemStats *stats) {
     int i;
     
@@ -536,6 +660,12 @@ void calculate_system_stats(TempSensor *sensors, int count, SystemStats *stats) 
     if (stats->min_cpu_temp > 900) stats->min_cpu_temp = 0;
 }
 
+/**
+ * @brief Gets display name for a sensor type
+ * 
+ * @param type Sensor type enumeration
+ * @return Human-readable type name string
+ */
 const char* get_type_name(SensorType type) {
     switch (type) {
         case SENSOR_CPU: return "CPU";
@@ -549,6 +679,12 @@ const char* get_type_name(SensorType type) {
     }
 }
 
+/**
+ * @brief Gets icon/badge for a sensor type
+ * 
+ * @param type Sensor type enumeration
+ * @return Icon string for display
+ */
 const char* get_type_icon(SensorType type) {
     switch (type) {
         case SENSOR_CPU: return "[CPU]";
@@ -562,6 +698,12 @@ const char* get_type_icon(SensorType type) {
     }
 }
 
+/**
+ * @brief Gets ANSI color code for sensor status
+ * 
+ * @param status Sensor status enumeration
+ * @return ANSI color escape sequence
+ */
 const char* get_status_color(SensorStatus status) {
     switch (status) {
         case STATUS_OK: return COLOR_GREEN;

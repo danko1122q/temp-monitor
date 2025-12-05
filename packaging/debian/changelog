@@ -1,3 +1,12 @@
+temp (0.0.2-1) unstable; urgency=low
+
+  * Fixed display leaving trail/ghost output in terminal
+  * Implemented alternate screen buffer for clean display
+  * Added comprehensive code documentation
+  * Simplified and professionalized application name
+
+ -- Danko <davaniko1122@gmail.com>  Thu, 05 Dec 2024 12:00:00 +0000
+
 temp (0.0.1-1) unstable; urgency=low
 
   * Initial release

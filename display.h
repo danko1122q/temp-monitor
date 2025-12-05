@@ -1,3 +1,17 @@
+/**
+ * @file display.h
+ * @brief Temp Monitor - Display and UI functions
+ * 
+ * Header file containing display function prototypes and
+ * data structures for terminal UI rendering.
+ * 
+ * @version 0.0.2
+ * @date 2024-12-05
+ * 
+ * MIT License
+ * Copyright (c) 2024 Danko
+ */
+
 #ifndef DISPLAY_H
 #define DISPLAY_H
 
@@ -25,6 +39,8 @@ void get_terminal_size(int *rows, int *cols);
 void move_cursor(int row, int col);
 void hide_cursor(void);
 void show_cursor(void);
+void enter_alternate_screen(void);
+void exit_alternate_screen(void);
 void set_color(const char *color);
 void reset_color(void);
 

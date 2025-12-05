@@ -1,3 +1,28 @@
+/**
+ * @file main.c
+ * @brief Temp Monitor - Main Entry Point
+ * 
+ * This file contains the main entry point for the temperature monitoring
+ * application. It handles command-line argument parsing, signal handling,
+ * sensor initialization, and the main monitoring loop.
+ * 
+ * @version 0.0.2
+ * @date 2024-12-05
+ * 
+ * MIT License
+ * Copyright (c) 2024 Danko
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,11 +32,19 @@
 #include "display.h"
 #include "utils.h"
 
-#define VERSION "0.0.1"
+/* Application version */
+#define VERSION "0.0.2"
 
+/* Global flag for graceful shutdown on SIGINT (Ctrl+C) */
 volatile sig_atomic_t keep_running = 1;
+
+/* Array to store all detected temperature sensors */
 TempSensor sensors[MAX_SENSORS];
+
+/* Number of detected sensors */
 int sensor_count = 0;
+
+/* Display configuration with default values */
 DisplayConfig config = {
     .use_celsius = 1,
     .show_stats = 0,
@@ -22,19 +55,33 @@ DisplayConfig config = {
     .refresh_rate = 2
 };
 
+/**
+ * @brief Signal handler for SIGINT (Ctrl+C)
+ * 
+ * Sets keep_running to 0 to trigger graceful shutdown of the monitoring loop.
+ * 
+ * @param sig Signal number (unused)
+ */
 void sigint_handler(int sig) {
     (void)sig;
     keep_running = 0;
 }
 
+/**
+ * @brief Prints the help message with usage information
+ * 
+ * Displays detailed help including options, arguments, examples,
+ * keyboard controls, features, and troubleshooting tips.
+ * 
+ * @param prog_name Name of the program executable
+ */
 void print_help(const char *prog_name) {
     printf("\n");
-    printf(COLOR_BRIGHT_CYAN "======================================================================\n");
-    printf("  " COLOR_RESET COLOR_BOLD COLOR_YELLOW "ULTIMATE HARDWARE TEMPERATURE MONITOR v%s" COLOR_RESET "\n", VERSION);
-    printf(COLOR_BRIGHT_CYAN "======================================================================\n" COLOR_RESET);
-    printf(COLOR_BRIGHT_CYAN "" COLOR_RESET " A powerful real-time hardware temperature monitoring tool\n");
-    printf(" Supports CPU, GPU, NVMe, Chipset, and more!\n");
-    printf(COLOR_BRIGHT_CYAN "======================================================================\n" COLOR_RESET);
+    printf(COLOR_BRIGHT_CYAN "==========================================================\n");
+    printf("  " COLOR_RESET COLOR_BOLD COLOR_BRIGHT_WHITE "Temp Monitor" COLOR_RESET " v%s\n", VERSION);
+    printf(COLOR_BRIGHT_CYAN "==========================================================\n" COLOR_RESET);
+    printf("  Real-time hardware temperature monitoring for Linux\n");
+    printf(COLOR_BRIGHT_CYAN "==========================================================\n" COLOR_RESET);
     
     printf("\n" COLOR_BOLD COLOR_GREEN "USAGE:\n" COLOR_RESET);
     printf("  %s [OPTIONS] [REFRESH_RATE]\n\n", prog_name);
@@ -65,39 +112,39 @@ void print_help(const char *prog_name) {
     printf("  " COLOR_GREEN "F" COLOR_RESET " / " COLOR_GREEN "C" COLOR_RESET "               Toggle between Fahrenheit/Celsius\n");
     printf("  " COLOR_YELLOW "S" COLOR_RESET "                   Toggle statistics display\n");
     
-    printf("\n" COLOR_BOLD COLOR_MAGENTA "FEATURES:\n" COLOR_RESET);
-    printf("  [+] Real-time temperature monitoring\n");
-    printf("  [+] Automatic sensor detection (CPU, GPU, NVMe, Chipset)\n");
-    printf("  [+] Color-coded temperature bars with visual indicators\n");
-    printf("  [+] Min/Max/Average temperature tracking\n");
-    printf("  [+] Warning and critical temperature alerts\n");
-    printf("  [+] Support for multiple CPUs and GPUs\n");
-    printf("  [+] Beautiful Unicode UI with boxes and icons\n");
+    printf("\n" COLOR_BOLD COLOR_GREEN "SUPPORTED SENSORS:\n" COLOR_RESET);
+    printf("  CPU, GPU, NVMe, Chipset, Memory, VRM, Disk\n");
     
     printf("\n" COLOR_BOLD COLOR_YELLOW "TROUBLESHOOTING:\n" COLOR_RESET);
-    printf("  If no sensors are detected, try:\n");
-    printf("  1. Load kernel modules:\n");
-    printf("     " COLOR_BRIGHT_BLACK "sudo modprobe coretemp k10temp" COLOR_RESET " (for CPU sensors)\n");
-    printf("  2. Install and configure lm-sensors:\n");
-    printf("     " COLOR_BRIGHT_BLACK "sudo apt install lm-sensors\n");
-    printf("     sudo sensors-detect" COLOR_RESET "\n");
-    printf("  3. Check for available sensors:\n");
-    printf("     " COLOR_BRIGHT_BLACK "ls -la /sys/class/hwmon/" COLOR_RESET "\n\n");
-    
-    printf(COLOR_BRIGHT_BLACK "For more information, visit: https://github.com/danko1122/temp-monitor\n" COLOR_RESET);
-    printf("\n");
+    printf("  No sensors? Try: sudo modprobe coretemp k10temp\n");
+    printf("  Or install lm-sensors and run: sudo sensors-detect\n\n");
 }
 
+/**
+ * @brief Prints version information
+ * 
+ * Displays the application name, version, author, and license.
+ */
 void print_version(void) {
     printf("\n");
-    printf(COLOR_BOLD COLOR_BRIGHT_YELLOW "Ultimate Hardware Temperature Monitor\n" COLOR_RESET);
-    printf(COLOR_BRIGHT_CYAN "Version: " COLOR_RESET COLOR_GREEN "%s\n" COLOR_RESET, VERSION);
-    printf(COLOR_BRIGHT_CYAN "Author:  " COLOR_RESET "Danko\n");
-    printf(COLOR_BRIGHT_CYAN "License: " COLOR_RESET "MIT License\n");
+    printf(COLOR_BOLD COLOR_BRIGHT_WHITE "Temp Monitor\n" COLOR_RESET);
+    printf(COLOR_BRIGHT_BLACK "Version: " COLOR_RESET "%s\n", VERSION);
+    printf(COLOR_BRIGHT_BLACK "Author:  " COLOR_RESET "Danko\n");
+    printf(COLOR_BRIGHT_BLACK "License: " COLOR_RESET "MIT\n");
     printf("\n");
 }
 
+/**
+ * @brief Main monitoring loop
+ * 
+ * Enters alternate screen buffer to prevent display artifacts,
+ * then continuously updates and displays sensor data until
+ * the user presses Ctrl+C. Uses alternate screen buffer technique
+ * similar to vim/htop to keep terminal clean.
+ */
 void run_monitoring(void) {
+    /* Switch to alternate screen buffer for clean display */
+    enter_alternate_screen();
     hide_cursor();
     
     while (keep_running) {
@@ -118,8 +165,17 @@ void run_monitoring(void) {
     }
     
     show_cursor();
+    exit_alternate_screen();
 }
 
+/**
+ * @brief Initializes and scans for temperature sensors
+ * 
+ * Scans the hwmon and thermal subsystems for available temperature
+ * sensors and populates the global sensors array.
+ * 
+ * @return 1 if sensors were found, 0 otherwise
+ */
 int initialize_sensors(void) {
     printf(COLOR_BRIGHT_YELLOW "[*] Initializing temperature monitoring system...\n" COLOR_RESET);
     printf(COLOR_CYAN "[~] Scanning for hardware sensors...\n" COLOR_RESET);
@@ -179,6 +235,15 @@ int initialize_sensors(void) {
     return 1;
 }
 
+/**
+ * @brief Parses command-line arguments
+ * 
+ * Processes all command-line options and sets the appropriate
+ * configuration values. Supports short (-h) and long (--help) options.
+ * 
+ * @param argc Argument count
+ * @param argv Argument vector
+ */
 void parse_arguments(int argc, char *argv[]) {
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
@@ -216,9 +281,25 @@ void parse_arguments(int argc, char *argv[]) {
     }
 }
 
+/**
+ * @brief Main entry point
+ * 
+ * Program flow:
+ * 1. Setup signal handler for graceful shutdown
+ * 2. Parse command-line arguments
+ * 3. Initialize and scan for sensors
+ * 4. Run the monitoring loop
+ * 5. Cleanup and exit
+ * 
+ * @param argc Argument count
+ * @param argv Argument vector
+ * @return 0 on success, 1 on failure
+ */
 int main(int argc, char *argv[]) {
+    /* Setup signal handler for Ctrl+C */
     signal(SIGINT, sigint_handler);
     
+    /* Parse command-line arguments */
     parse_arguments(argc, argv);
     
     if (!initialize_sensors()) {
@@ -233,11 +314,9 @@ int main(int argc, char *argv[]) {
     
     run_monitoring();
     
-    clear_screen();
-    show_cursor();
     printf("\n");
-    printf(COLOR_BRIGHT_YELLOW "Temperature monitoring stopped.\n" COLOR_RESET);
-    printf(COLOR_GREEN "Thank you for using Ultimate Hardware Temperature Monitor!\n" COLOR_RESET);
+    printf(COLOR_BRIGHT_WHITE "Monitoring stopped.\n" COLOR_RESET);
+    printf(COLOR_BRIGHT_BLACK "Temp Monitor v%s\n" COLOR_RESET, VERSION);
     printf("\n");
     
     return 0;
