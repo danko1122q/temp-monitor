@@ -1,13 +1,13 @@
 /**
  * @file display.h
  * @brief Temp Monitor - Display and UI functions
- * 
+ *
  * Header file containing display function prototypes and
  * data structures for terminal UI rendering.
- * 
+ *
  * @version 0.0.2
  * @date 2024-12-05
- * 
+ *
  * MIT License
  * Copyright (c) 2024 Danko
  */
@@ -15,23 +15,26 @@
 #ifndef DISPLAY_H
 #define DISPLAY_H
 
-#include <stddef.h>
 #include "sensor.h"
 
-typedef struct {
-    int use_celsius;
-    int show_stats;
-    int show_graphs;
-    int show_fans;
-    int compact_mode;
-    int color_mode;
-    int refresh_rate;
+#include <stddef.h>
+
+typedef struct
+{
+  int use_celsius;
+  int show_stats;
+  int show_graphs;
+  int show_fans;
+  int compact_mode;
+  int color_mode;
+  int refresh_rate;
 } DisplayConfig;
 
-typedef struct {
-    double temps[100];
-    int index;
-    int size;
+typedef struct
+{
+  double temps[100];
+  int    index;
+  int    size;
 } TempHistory;
 
 void clear_screen(void);
@@ -44,7 +47,7 @@ void exit_alternate_screen(void);
 void set_color(const char *color);
 void reset_color(void);
 
-void print_temperature(double temp, int use_celsius);
+void   print_temperature(double temp, int use_celsius);
 double celsius_to_fahrenheit(double celsius);
 
 void print_header(const char *version);
@@ -70,8 +73,8 @@ void init_temp_history(TempHistory *history, int size);
 void add_temp_history(TempHistory *history, double temp);
 void display_temp_graph(TempHistory *history, const char *label, int width, int height);
 
-void get_current_time(char *buffer, size_t size);
-void format_uptime(char *buffer, size_t size);
-const char* get_bar_char(double temp);
+void        get_current_time(char *buffer, size_t size);
+void        format_uptime(char *buffer, size_t size);
+const char *get_bar_char(double temp);
 
 #endif
